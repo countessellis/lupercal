@@ -4,8 +4,13 @@ use std::{time,thread,io};
 use openssl::ssl::{SslAcceptor,SslMethod};
 use openssl::pkey::PKey;
 use std::io::ErrorKind;
+use std::io::Write;
+use std::fs;
+use url::Url;
+use std::path::Path;
 
 use crate::defaults::*;
+use crate::response::*;
 use crate::store::*;
 
 ///////////// Mode
@@ -64,17 +69,60 @@ impl Server {
                   let mut buffer: [u8;1024] = [0;1024];
                   match acceptor.accept(incoming) {
                     Ok(mut stream) => {
-                      match stream.ssl_read(&mut buffer) {
+                      let response: Response = match stream.ssl_read(&mut buffer) {
                         Ok(len) => {
                           match str::from_utf8(&buffer) {
                             Ok(request) => {
-                              log::debug!("Request: {}",request);
+                              log::debug!("Request: {}",request.trim_end());
+                              match Url::parse(request.trim_end()) {
+                                Ok(url) => {
+                                  let mut file: String = format!("{}{}",DEFAULT_CONTENT_DIR,url.path());
+                                  if file.ends_with("/") { file.truncate(file.len()-1); }
+                                  let path = Path::new(&file);
+                                  if path.is_dir() { file = format!("{}/index.gmi",file) }
+                                  match fs::exists(&file) {
+                                    Ok(true) => {
+                                      match fs::read_to_string(&file) {
+                                        Ok(content) => {
+                                          log::info!("Returning contents of {}.",file);
+                                          Response::new(&ResponseCode::Success,&String::from("text/gemini"),&content)
+                                        },
+                                        Err(err) => {
+                                          log::error!("Failed to read file {}: {}",file,err);
+                                          Response::new(&ResponseCode::Fail,&String::from("Server Error"),&String::new())
+                                        },
+                                      }
+                                    },
+                                    Ok(false) => {
+                                      log::error!("File {} does not exist.",file);
+                                      Response::new(&ResponseCode::FailNotFound,&format!("{} not found",url.path()),&String::new())
+                                    },
+                                    Err(err) => {
+                                      log::error!("Error testing if {} exists: {}",file,err);
+                                      Response::new(&ResponseCode::Fail,&String::from("Server Failure"),&String::new())
+                                    }
+                                  }
+                                },
+                                Err(err) => {
+                                  log::error!("Failed to parse uri from request: {}",err);
+                                  Response::new(&ResponseCode::FailBadReq,&String::from("Invalid URI"),&String::new())
+                                },
+                              }
                             },
-                            Err(err) => log::error!("Failed to parse request: {}",err),
+                            Err(err) => {
+                              log::error!("Failed to parse request: {}",err);
+                              Response::new(&ResponseCode::FailBadReq,&String::from("Bad Request"),&String::new())
+                            },
                           }
                         },
-                        Err(err) => log::error!("Failed to read request: {}",err),
-                      }
+                        Err(err) => {
+                          log::error!("Failed to read request: {}",err);
+                          Response::new(&ResponseCode::FailPerm,&String::from("Failed to read request"),&String::new())
+                        },
+                      };
+                      log::debug!("Response: {}",response);
+                      stream.write_all(format!("{}",response).as_bytes());
+                      stream.shutdown();
                     },
                     Err(err) => log::error!("Failed to establish encryption: {}",err),
                   }

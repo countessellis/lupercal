@@ -20,6 +20,7 @@ tiny_http = { version = "0.12.0", features = ["ssl-openssl"] }
 log = "0.4.29"
 openssl = { version = "0.10", features = ["vendored"] }
 base64 = "0.22.1"
+url = "2.5.7"
 
 [build-dependencies]
 chrono = "0.4.42"

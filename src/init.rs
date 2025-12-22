@@ -13,7 +13,7 @@ pub fn run() {
   match Mode::mode() {
     Mode::Server=> {
       log::debug!("Running in Server mode.");
-      match Server::new(String::from(SERVER_NAME)) {
+      match Server::new(String::from(DEFAULT_SERVER_NAME)) {
         Some(server) => {
           server.listen();
         },
