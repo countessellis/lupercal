@@ -1,0 +1,32 @@
+[package]
+name = "lupercal"
+authors = ["Bethany Davis <ellis@despoena.com>"]
+readme = "README.md"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "lupercal"
+path = "src/main.rs"
+
+[lib]
+name = "lupercal"
+path = "src/lib.rs"
+
+[dependencies]
+ansi_term = "0.12.1"
+env_logger = "0.11.8"
+tiny_http = { version = "0.12.0", features = ["ssl-openssl"] }
+log = "0.4.29"
+openssl = { version = "0.10", features = ["vendored"] }
+base64 = "0.22.1"
+
+[build-dependencies]
+chrono = "0.4.42"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"
+
