@@ -1,4 +1,4 @@
-use std::str::FromStr;
+//use std::str::FromStr;
 use std::fmt;
 
 ///////////// Response
@@ -7,37 +7,50 @@ use std::fmt;
 pub(crate) struct Response {
   pub(crate) code: ResponseCode,
   pub(crate) head: String,
-  pub(crate) body: String,
+  pub(crate) body: Vec<u8>,
 }
 
-impl FromStr for Response {
-  type Err = &'static str;
-  fn from_str(s: &str) -> Result<Self, Self::Err> {
-    let mut body: Vec<&str> = s.lines().collect();
-    let header: &str = body.remove(0);
-    let mut head: Vec<&str> = header.split(" ").collect();
-    let code: ResponseCode = match head.remove(0).to_string().parse::<u16>() {
-      Ok(code) => {
-        match ResponseCode::try_from(code) {
-          Ok(code) => code,
-          Err(err) => ResponseCode::Invalid,
-        }
-      },
-      Err(err) => ResponseCode::Invalid,
-    };
-    Ok(Response { code: code, head: head.join(" "), body: body.join("\n") })
-  }
-}
+//impl FromStr for Response {
+//  type Err = &'static str;
+//  fn from_str(s: &str) -> Result<Self, Self::Err> {
+//    let mut body: Vec<&str> = s.lines().collect();
+//    let header: &str = body.remove(0);
+//    let mut head: Vec<&str> = header.split(" ").collect();
+//    let code: ResponseCode = match head.remove(0).to_string().parse::<u16>() {
+//      Ok(code) => {
+//        match ResponseCode::try_from(code) {
+//          Ok(code) => code,
+//          Err(err) => ResponseCode::Invalid,
+//        }
+//      },
+//      Err(err) => ResponseCode::Invalid,
+//    };
+//    Ok(Response { code: code, head: head.join(" "), body: body.join("\n") })
+//  }
+//}
 
 impl fmt::Display for Response {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{} {}\r\n{}",self.code.clone() as u16,self.head,self.body)
+    if self.body.is_empty() {
+      write!(f, "{} {}\r\n",self.code.clone() as u16,self.head)
+    } else {
+      match String::from_utf8(self.body.clone()) {
+        Ok(body) => write!(f, "{} {}\r\n{}",self.code.clone() as u16,self.head,body),
+        Err(_)   => write!(f, "{} {}\r\n{:?}",self.code.clone() as u16,self.head,self.body),
+      }
+    }
   }
 }
 
 impl Response {
-  pub(crate) fn new(code: &ResponseCode, head: &String, body: &String) -> Response {
+  pub(crate) fn new(code: &ResponseCode, head: &String, body: &Vec<u8>) -> Response {
     Response { code: code.clone(), head: head.clone(), body: body.clone() }
+  }
+
+  pub(crate) fn into_bytes(&self) -> Vec<u8> {
+    let mut bytes: Vec<u8> = format!("{} {}\r\n",self.code.clone() as u16,self.head).into_bytes();
+    bytes.append(&mut self.body.clone());
+    bytes
   }
 }
 

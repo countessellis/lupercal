@@ -1,3 +1,5 @@
+pub mod client;
+pub mod config;
 pub mod defaults;
 pub mod init;
 pub mod logger;
@@ -6,3 +8,4 @@ pub mod response;
 pub mod server;
 pub mod splash;
 pub mod store;
+pub mod util;

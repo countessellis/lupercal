@@ -1,5 +1,6 @@
 use std::env::{args,Args};
 use std::str::FromStr;
+use std::fmt;
 
 ///////////// Mode
 
@@ -25,15 +26,33 @@ impl FromStr for Mode {
   }
 }
 
+impl fmt::Display for Mode {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    let mode: &str = match self {
+      Mode::Server => "server",
+      Mode::Client => "client",
+    };
+    write!(f, "{}",mode)
+  }
+}
+
 impl Mode {
   pub(crate) fn mode() -> Mode {
     log::debug!("Getting mode from arguments.");
     let mut args: Args = args();
     while let Some(arg) = args.next() {
       match arg.as_str() {
-        "server" => return Mode::Server,
-        "client" => return Mode::Client,
-        _        => {},
+        "--mode" => match args.next() {
+          Some(mode) => match mode.as_str() {
+            "server" => return Mode::Server,
+            "client" => return Mode::Client,
+            _        => {},
+          },
+          None       => {},
+        },
+        "--server"   => return Mode::Server,
+        "--client"   => return Mode::Client,
+        _ => {},
       }
     }
     Default::default()

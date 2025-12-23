@@ -4,12 +4,8 @@ use openssl::x509::{X509,X509Req,X509ReqBuilder,X509Name};
 use openssl::rsa::Rsa;
 use openssl::pkey::{PKey,Private};
 use openssl::error::ErrorStack;
-use openssl::bn::BigNum;
 use openssl::asn1::Asn1Time;
 use openssl::hash::MessageDigest;
-use openssl::sign::Signer;
-use base64::prelude::BASE64_URL_SAFE;
-use base64::Engine;
 
 ///////////// Store
 

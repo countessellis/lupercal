@@ -1,5 +1,5 @@
-use std::fs::write;
-
+use crate::client::*;
+use crate::config::*;
 use crate::defaults::*;
 use crate::mode::*;
 use crate::splash::*;
@@ -13,7 +13,8 @@ pub fn run() {
   match Mode::mode() {
     Mode::Server=> {
       log::debug!("Running in Server mode.");
-      match Server::new(String::from(DEFAULT_SERVER_NAME)) {
+      let config: Config = Config::from_file(&DEFAULT_SERVER_CONFIG.to_string());
+      match Server::new(&config) {
         Some(server) => {
           server.listen();
         },
@@ -22,6 +23,13 @@ pub fn run() {
     },
     Mode::Client => {
       log::debug!("Running in Client mode.");
+      let config: Config = Config::from_file(&DEFAULT_CLIENT_CONFIG.to_string());
+      match Client::new(&config) {
+        Some(client) => {
+          client.request();
+        },
+        None => {},
+      }
     },
   }
 }
