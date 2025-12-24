@@ -13,10 +13,14 @@ pub(crate) const DEFAULT_LOG_FORMAT_LEVEL: bool                                 
 pub(crate) const DEFAULT_LOG_FORMAT_TARGET: bool                                           = true; // false;
 pub(crate) const DEFAULT_LOG_TARGET: env_logger::fmt::Target                               = env_logger::fmt::Target::Stdout;
 
-pub(crate) const DEFAULT_LISTEN_ADDRESS: &str = "0.0.0.0:1965";
-pub(crate) const DEFAULT_SERVER_NAME: &str    = "localhost.localdomain";
-pub(crate) const DEFAULT_CLIENT_NAME: &str    = "username@localhost.localdomain";
-pub(crate) const DEFAULT_CONTENT_DIR: &str    = "content";
-pub(crate) const DEFAULT_CONFIG_DIR: &str     = "config/";
-pub(crate) const DEFAULT_SERVER_CONFIG: &str  = "config/server.cfg";
-pub(crate) const DEFAULT_CLIENT_CONFIG: &str  = "config/client.cfg";
+pub(crate) const DEFAULT_LISTEN_ADDRESS: &str   = "0.0.0.0:1965";
+pub(crate) const DEFAULT_SERVER_NAME: &str      = "localhost.localdomain";
+pub(crate) const DEFAULT_CLIENT_NAME: &str      = "username@localhost.localdomain";
+pub(crate) const DEFAULT_CONTENT_DIR: &str      = "content";
+pub(crate) const DEFAULT_SERVER_CACHE_DIR: &str = "cache/server";
+pub(crate) const DEFAULT_CLIENT_CACHE_DIR: &str = "cache/client";
+pub(crate) const DEFAULT_SERVER_STORE_DIR: &str = "cache/server/store/";
+pub(crate) const DEFAULT_CLIENT_STORE_DIR: &str = "cache/client/store/";
+pub(crate) const DEFAULT_CONFIG_DIR: &str       = "config/";
+pub(crate) const DEFAULT_SERVER_CONFIG: &str    = "config/server.cfg";
+pub(crate) const DEFAULT_CLIENT_CONFIG: &str    = "config/client.cfg";

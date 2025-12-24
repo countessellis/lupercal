@@ -31,7 +31,7 @@ impl Clone for Server {
 impl Server {
   pub(crate) fn new(config: &Config) -> Option<Server> {
     // Create store:
-    match Store::new(&config.server_name) {
+    match Store::new(&config) {
       Ok(store) => {
         log::info!("Key store created successfully.");
         log::info!("Starting listener...");

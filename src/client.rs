@@ -31,7 +31,7 @@ impl Clone for Client {
 impl Client {
   pub(crate) fn new(config: &Config) -> Option<Client> {
     // Create store:
-    match Store::new(&config.client_name) {
+    match Store::new(&config) {
       Ok(store) => {
         log::info!("Key store created successfully.");
         log::info!("Starting listener...");

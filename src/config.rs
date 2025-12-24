@@ -1,38 +1,58 @@
 use std::fs::{read_to_string,write};
 use std::fs;
 use std::env::{args,Args};
+use std::str::FromStr;
 
 use crate::defaults::*;
+use crate::mode::*;
 use crate::util::*;
 
 #[derive(Debug, Clone)]
 pub struct Config {
+  // General:
+  pub(crate) mode:      Mode,
   // Server related:
   pub(crate) server_name: String,
   pub(crate) content_dir: String,
+  pub(crate) server_cache_dir: String,
+  pub(crate) server_store_dir: String,
   // Client related:
   pub(crate) client_name: String,
+  pub(crate) client_cache_dir: String,
+  pub(crate) client_store_dir: String,
 }
 
 impl Config {
   pub(crate) fn defaults() -> Config {
-    // Server related:
-    let server_name: String = DEFAULT_SERVER_NAME.to_string();
-    let content_dir: String = DEFAULT_CONTENT_DIR.to_string();
-    // Client related:
-    let client_name: String = DEFAULT_CLIENT_NAME.to_string();
-    // Build:
-    Config { server_name: server_name, content_dir: content_dir, client_name: client_name }
+    Config {
+      // General:
+      mode:             Default::default(),
+      // Server related:
+      server_name:      DEFAULT_SERVER_NAME.to_string(),
+      content_dir:      DEFAULT_CONTENT_DIR.to_string(),
+      server_cache_dir: DEFAULT_SERVER_CACHE_DIR.to_string(),
+      server_store_dir: DEFAULT_SERVER_STORE_DIR.to_string(),
+      // Client related:
+      client_name:      DEFAULT_CLIENT_NAME.to_string(),
+      client_cache_dir: DEFAULT_CLIENT_CACHE_DIR.to_string(),
+      client_store_dir: DEFAULT_CLIENT_STORE_DIR.to_string(),
+    }
   }
   
   pub fn write(&self,config_file: &String) -> Result<String,String> {
     let config_file: String = build_path(&config_file,&"config".to_string());
     let mut config: Vec<String> = Vec::new();
+    // General:
+    config.push(format!("mode: {}",self.mode));
     // Server related:
     config.push(format!("server_name: {}",self.server_name));
     config.push(format!("content_dir: {}",self.content_dir));
+    config.push(format!("server_cache_dir: {}",self.server_cache_dir));
+    config.push(format!("server_store_dir: {}",self.server_store_dir));
     // Client related:
     config.push(format!("client_name: {}",self.client_name));
+    config.push(format!("client_cache_dir: {}",self.client_cache_dir));
+    config.push(format!("client_store_dir: {}",self.client_store_dir));
     // Build:
     config.push("".to_string());
     match write(&config_file,config.join("\n")) {
@@ -44,11 +64,20 @@ impl Config {
   pub fn new() -> Config {
     let mut config = Config::defaults();
     println!("\n");
+    // General:
+    config.mode = match Mode::from_str(prompt(format!("Mode: (server or client, default: {})",config.mode),config.mode.to_string()).as_str()) {
+      Ok(mode) => mode,
+      Err(_)   => Default::default(),
+    };
     // Server related:
     config.server_name = prompt(format!("Server fully qualified domain name: (default: {})",config.server_name),config.server_name);
     config.content_dir = prompt(format!("Content directory: (default: {})",config.content_dir),config.content_dir);
+    config.server_cache_dir = prompt(format!("Server cache directory: (default: {})",config.server_cache_dir),config.server_cache_dir);
+    config.server_store_dir = prompt(format!("Server store directory: (default: {})",config.server_store_dir),config.server_store_dir);
     // Client related:
     config.client_name = prompt(format!("Client identifying name: (typically username@hostname or email address, default: {})",config.client_name),config.client_name);
+    config.client_cache_dir = prompt(format!("Client cache directory: (default: {})",config.client_cache_dir),config.client_cache_dir);
+    config.client_store_dir = prompt(format!("Client store directory: (default: {})",config.client_store_dir),config.client_store_dir);
     // Build:
     println!("\n");
     config
@@ -89,11 +118,20 @@ impl Config {
       if pair.len() > 1 {
         let value: String = pair[1..].join(":").trim_start().to_string();
         match pair[0] {
+          // General:
+          "mode"      => config.mode = match Mode::from_str(value.as_str()) {
+            Ok(mode) => mode,
+            Err(_)   => Default::default(),
+          },
           // Server related:
           "server_name" => config.server_name = value.clone(),
           "content_dir" => config.content_dir = value.clone(),
+          "server_cache_dir" => config.server_cache_dir = value.clone(),
+          "server_store_dir" => config.server_store_dir = value.clone(),
           // Client related:
           "client_name" => config.client_name = value.clone(),
+          "client_cache_dir" => config.client_cache_dir = value.clone(),
+          "client_store_dir" => config.client_store_dir = value.clone(),
           // Ignore everything else:
           _ => {},
         };
@@ -126,9 +164,16 @@ impl Config {
       match arg.as_str() {
         // Ignore flags processed elsewhere:
         "--config" => {},
-        "--mode" => {},
-        "--server" => {},
-        "--client" => {},
+        // Process general options:
+        "--mode" => match args.next() {
+          Some(mode) => config.mode = match Mode::from_str(mode.as_str()) {
+            Ok(mode) => mode,
+            Err(_)   => Default::default(),
+          },
+          None       => {},
+        },
+        "--server"   => config.mode = Mode::Server,
+        "--client"   => config.mode = Mode::Client,
         // Process server related options:
         "--server_name" => {
           match args.next() {
@@ -142,10 +187,34 @@ impl Config {
             None => {},
           }
         },
-        // Process server related options:
+        "--server_cache_dir" => {
+          match args.next() {
+            Some(value) => config.server_cache_dir = value,
+            None => {},
+          }
+        },
+        "--server_store_dir" => {
+          match args.next() {
+            Some(value) => config.server_store_dir = value,
+            None => {},
+          }
+        },
+        // Process Client related options:
         "--client_name" => {
           match args.next() {
             Some(value) => config.client_name = value,
+            None => {},
+          }
+        },
+        "--client_cache_dir" => {
+          match args.next() {
+            Some(value) => config.client_cache_dir = value,
+            None => {},
+          }
+        },
+        "--client_store_dir" => {
+          match args.next() {
+            Some(value) => config.client_store_dir = value,
             None => {},
           }
         },
