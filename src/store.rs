@@ -1,6 +1,6 @@
 use std::fmt;
 use std::collections::HashMap;
-use openssl::x509::{X509,X509Req,X509ReqBuilder,X509Name};
+use openssl::x509::{X509,X509Name};
 use openssl::rsa::Rsa;
 use openssl::pkey::{PKey,Private};
 use openssl::error::ErrorStack;
