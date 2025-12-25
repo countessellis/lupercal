@@ -142,10 +142,6 @@ impl Keys {
       Some(keypair) => keypair,
       None          => return Err(String::from("Failed to generate or retrieve private key.")),
     };
-    let csr: X509Req = match Self::create_csr(&config,&keypair) {
-      Ok(csr)  => csr,
-      Err(err) => return Err(format!("Failed to generate certificate signing request: {}",err)),
-    };
     let cert: X509 = match fs::exists(&cert_file) {
       Ok(true) => {
         let pem: Vec<u8> = match fs::read(&cert_file) {
@@ -159,7 +155,7 @@ impl Keys {
           Ok(cert)  => cert,
           Err(err) => {
             log::error!("Failed to load cert from {} exists, so creating a new one: {}",cert_file,err);
-            match Self::create_cert(&config,&keypair,&csr) {
+            match Self::create_cert(&config,&keypair) {
               Ok(cert)  => cert,
               Err(err) => return Err(format!("Failed to generate certificate: {}",err)),
             }
@@ -167,14 +163,14 @@ impl Keys {
         }
       },
       Ok(false) => {
-        match Self::create_cert(&config,&keypair,&csr) {
+        match Self::create_cert(&config,&keypair) {
           Ok(cert)  => cert,
           Err(err) => return Err(format!("Failed to generate certificate: {}",err)),
         }
       },
       Err(err) => {
         log::error!("Failed to check if cert file {} exists, so creating a new one: {}",cert_file,err);
-        match Self::create_cert(&config,&keypair,&csr) {
+        match Self::create_cert(&config,&keypair) {
           Ok(cert)  => cert,
           Err(err) => return Err(format!("Failed to generate certificate: {}",err)),
         }
@@ -231,28 +227,7 @@ impl Keys {
     }
   }
 
-  fn create_csr(config: &Config, keypair: &Rsa<Private>) -> Result<X509Req,ErrorStack> {
-    let name: String = match config.mode {
-      Mode::Server => config.server_name.clone(),
-      Mode::Client => config.client_name.clone(),
-    };
-    let store_dir: String = match config.mode {
-      Mode::Server => config.server_store_dir.clone(),
-      Mode::Client => config.client_store_dir.clone(),
-    };
-    let pkey = PKey::from_rsa(keypair.clone())?;
-    let mut name_builder = X509Name::builder()?;
-    name_builder.append_entry_by_text("CN", name.as_str())?;
-    let name = name_builder.build();
-    let mut req_builder = X509ReqBuilder::new()?;
-    req_builder.set_pubkey(&pkey)?;
-    req_builder.set_subject_name(&name)?;
-    req_builder.sign(&pkey, openssl::hash::MessageDigest::sha256())?;
-    let csr: X509Req = req_builder.build();
-    Ok(csr)
-  }
-
-  fn create_cert(config: &Config, keypair: &Rsa<Private>, csr: &X509Req) -> Result<X509,ErrorStack> {
+  fn create_cert(config: &Config, keypair: &Rsa<Private>) -> Result<X509,ErrorStack> {
     let name: String = match config.mode {
       Mode::Server => config.server_name.clone(),
       Mode::Client => config.client_name.clone(),

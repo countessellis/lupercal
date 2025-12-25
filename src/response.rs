@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::fmt;
 
 ///////////// Response
@@ -46,15 +45,21 @@ impl Response {
     };
     match String::from_utf8(header) {
       Ok(header_str) => {
-        let mut head: Vec<&str> = header_str.split(" ").collect();
+        let head: Vec<&str> = header_str.split(" ").collect();
         let code: ResponseCode = match head[0].to_string().parse::<u16>() {
           Ok(code) => {
             match ResponseCode::try_from(code) {
               Ok(code) => code,
-              Err(err) => ResponseCode::Invalid,
+              Err(_) => {
+                log::error!("Failed to parse response code from {}.",code);
+                ResponseCode::Invalid
+              },
             }
           },
-          Err(err) => ResponseCode::Invalid,
+          Err(err) => {
+            log::error!("Failed to parse response code from sting {}: {}",head[0],err);
+            ResponseCode::Invalid
+          },
         };
         Ok(Response { code: code, head: head[1..].join(" "), body: body.to_vec() })
       },

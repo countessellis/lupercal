@@ -66,7 +66,13 @@ impl Server {
               match SslAcceptor::mozilla_modern_v5(SslMethod::tls_server()) {
                 Ok(mut builder) => {
                   builder.set_private_key(&PKey::from_rsa(keys.keys.keypair.clone()).unwrap()).unwrap();
-                  builder.set_certificate(&keys.keys.cert.clone());
+                  match builder.set_certificate(&keys.keys.cert.clone()) {
+                    Ok(()) => {},
+                    Err(err) => {
+                      log::error!("Failed to set certificate for TLS: {}",err);
+                      return;
+                    },
+                  }
                   let acceptor: SslAcceptor = builder.build();
                   let mut buffer: [u8;1024] = [0;1024];
                   match acceptor.accept(incoming) {
@@ -135,8 +141,14 @@ impl Server {
                         },
                       };
                       log::debug!("Response: {}",response);
-                      stream.write_all(&response.into_bytes());
-                      stream.shutdown();
+                      match stream.write_all(&response.into_bytes()) {
+                        Ok(_) => {},
+                        Err(err) => log::error!("Failed to send response: {}",err),
+                      }
+                      match stream.shutdown() {
+                        Ok(_) => {},
+                        Err(err) => log::error!("Failed to close connection: {}",err),
+                      }
                     },
                     Err(err) => log::error!("Failed to establish encryption: {}",err),
                   }
