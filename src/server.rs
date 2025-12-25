@@ -37,7 +37,7 @@ impl Server {
         log::info!("Starting listener...");
         let socket: TcpListener = match TcpListener::bind(format!("{}:{}",config.listen_addr,DEFAULT_LISTEN_PORT)) {
           Ok(socket) => {
-            log::info!("Server {} listening on {}:{}",config.server_name,DEFAULT_LISTEN_);
+            log::info!("Server {} listening on {}:{}",config.server_name,config.listen_addr,DEFAULT_LISTEN_PORT);
             socket
           },
           Err(err)   => {
@@ -66,7 +66,7 @@ impl Server {
               match SslAcceptor::mozilla_modern_v5(SslMethod::tls_server()) {
                 Ok(mut builder) => {
                   builder.set_private_key(&PKey::from_rsa(keys.keys.keypair.clone()).unwrap()).unwrap();
-                  builder.set_certificate(&keys.keys.cert.clone().unwrap()).unwrap();
+                  builder.set_certificate(&keys.keys.cert.clone());
                   let acceptor: SslAcceptor = builder.build();
                   let mut buffer: [u8;1024] = [0;1024];
                   match acceptor.accept(incoming) {
