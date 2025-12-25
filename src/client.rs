@@ -9,6 +9,9 @@ use url::Url;
 use std::path::Path;
 use std::env::Args;
 use std::env::args;
+use std::net::TcpStream;
+use openssl::ssl::{SslConnector,SslVerifyMode};
+use std::io::{BufReader,BufRead};
 
 use crate::config::*;
 use crate::defaults::*;
@@ -51,6 +54,59 @@ impl Client {
         match Url::parse(&arg) {
           Ok(url) => {
             log::info!("Making request for: {}",arg);
+            match url.host_str() {
+              Some(host) => {
+                match TcpStream::connect(format!("{}:{}",host,DEFAULT_LISTEN_PORT)) {
+                  Ok(connection) => {
+                    match SslConnector::builder(SslMethod::tls()) {
+                      Ok(mut builder) => {
+                        builder.set_verify(SslVerifyMode::NONE);
+                        let connector: SslConnector = builder.build();
+                        match connector.connect(host, &connection) {
+                          Ok(mut tunnel) => {
+                            match tunnel.ssl_write(format!("{}\r\n",arg).as_bytes()) {
+                              Ok(_) => {
+                                let mut buffer: [u8;1024] = [0;1024];
+                                match tunnel.ssl_read(&mut buffer) {
+                                  Ok(len) => {
+                                    match Response::from_bytes(&buffer.to_vec()) {
+                                      Ok(response) => {
+                                        log::info!("Response: {}",response);
+                                      },
+                                      Err(err) => {
+                                        log::error!("Failed to parse response from {}: {}",arg,err);  
+                                      },
+                                    }
+                                  },
+                                  Err(err) => {
+                                    log::error!("Failed to read response from {}: {}",arg,err);
+                                  },
+                                }
+                              },
+                              Err(err) => {
+                                log::error!("Failed to send request to {}: {}",arg,err);
+                              },
+                            }
+                          },
+                          Err(err)   => {
+                            log::error!("Failed to establish SSL connection to {}:{}: {}",host,DEFAULT_LISTEN_PORT,err);
+                          }
+                        }
+                      },
+                      Err(err) => {
+                        log::error!("Failed to create SSL connector for {}:{}: {}",host,DEFAULT_LISTEN_PORT,err);
+                      },
+                    }
+                  },
+                  Err(err)   => {
+                    log::error!("Failed to connect to {}:{}: {}",host,DEFAULT_LISTEN_PORT,err);
+                  },
+                };
+              },
+              None => {
+                log::error!("Unable to determine host.");
+              },
+            }
           },
           Err(err) => {
             log::error!("Failed to parse {} as an url: {}",arg,err);

@@ -13,7 +13,8 @@ pub(crate) const DEFAULT_LOG_FORMAT_LEVEL: bool                                 
 pub(crate) const DEFAULT_LOG_FORMAT_TARGET: bool                                           = true; // false;
 pub(crate) const DEFAULT_LOG_TARGET: env_logger::fmt::Target                               = env_logger::fmt::Target::Stdout;
 
-pub(crate) const DEFAULT_LISTEN_ADDRESS: &str   = "0.0.0.0:1965";
+pub(crate) const DEFAULT_LISTEN_ADDR: &str      = "0.0.0.0";
+pub(crate) const DEFAULT_LISTEN_PORT: &str      = "1965";
 pub(crate) const DEFAULT_SERVER_NAME: &str      = "localhost.localdomain";
 pub(crate) const DEFAULT_CLIENT_NAME: &str      = "username@localhost.localdomain";
 pub(crate) const DEFAULT_CONTENT_DIR: &str      = "content";

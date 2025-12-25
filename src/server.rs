@@ -35,9 +35,9 @@ impl Server {
       Ok(store) => {
         log::info!("Key store created successfully.");
         log::info!("Starting listener...");
-        let socket: TcpListener = match TcpListener::bind(DEFAULT_LISTEN_ADDRESS) {
+        let socket: TcpListener = match TcpListener::bind(format!("{}:{}",config.listen_addr,DEFAULT_LISTEN_PORT)) {
           Ok(socket) => {
-            log::info!("Server {} listening on {}",config.server_name,DEFAULT_LISTEN_ADDRESS);
+            log::info!("Server {} listening on {}:{}",config.server_name,config.listen_addr,DEFAULT_LISTEN_PORT);
             socket
           },
           Err(err)   => {
