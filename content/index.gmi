@@ -1,3 +1,12 @@
 # Lupercal
 
 A simple Gemini server and client written in Rust
+
+# Header 1
+## Header 2
+### Header 3
+=> text.txt
+=> text.txt A text file
+=> //lupercal.ipnhome.ironpixie.net/text.txt
+* test
+* test

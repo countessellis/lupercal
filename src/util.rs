@@ -1,5 +1,6 @@
 use std::io::{Write,stdout,stdin};
 use std::fs;
+use url::Url;
 
 pub(crate) fn prompt(prompt: String, default: String) -> String {
   print!("{} ",prompt);
@@ -34,4 +35,22 @@ pub(crate) fn build_path(path: &String, prefix: &String) -> String {
       Err(_) => path.clone(),
     }
   }
+}
+
+pub(crate) fn build_abs_url(source: &Url, link: &String) -> String {
+  let scheme: &str = if link.contains("://") {
+    let parts: Vec<&str> = link.split(":").collect();
+    parts[0]
+  } else { source.scheme() };
+  let host: &str = if link.contains("//") {
+    let parts: Vec<&str> = link.split("/").collect();
+    parts[2]
+  } else { source.host_str().unwrap() };
+  let path: &str = if link.contains("//") {
+    let parts: Vec<&str> = link.split("/").collect();
+    &parts[3..].join("/")
+  } else {
+    link
+  };
+  format!("{}://{}/{}",scheme,host,path)
 }

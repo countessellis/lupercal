@@ -26,10 +26,18 @@ pub fn run() {
       let config: Config = Config::from_file(&DEFAULT_CLIENT_CONFIG.to_string());
       match Client::new(&config) {
         Some(client) => {
-          client.request();
+          match Client::request_from_args() {
+            Some(request) => {
+              let mut request: Option<String> = client.request(&request);
+              while let Some(link) = request {
+                request = client.request(&link);
+              }
+            },
+            None          => log::error!("No request provided."),
+          }
         },
         None => {},
       }
-    },
+    }
   }
 }
