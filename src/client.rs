@@ -7,18 +7,23 @@ use openssl::ssl::{SslConnector,SslVerifyMode};
 use std::time::Duration;
 use color_eyre::{eyre::Context, Result};
 use ratatui::{
-  crossterm::event::{self, Event, KeyCode, KeyEventKind},
-  widgets::Paragraph,
+  crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
+  crossterm::terminal,
+  widgets::*,
   DefaultTerminal, Frame,
 };
 use ratatui::text::Line;
 use ratatui::style::Style;
 use ratatui::style::Modifier;
+use ratatui::prelude::*;
+use ratatui::layout::{Constraint, Flex, Rect};
+use std::thread;
 
 use crate::config::*;
 use crate::defaults::*;
 use crate::display::*;
 use crate::response::*;
+use crate::splash;
 use crate::store::*;
 use crate::util;
 
@@ -42,6 +47,7 @@ impl Client {
       Ok(store) => {
         log::info!("Key store created successfully.");
         log::info!("Starting listener...");
+        Self::splash();
         Some(Client { config: config.clone(), keys: store.clone() })
       },
       Err(err)    => {
@@ -128,38 +134,102 @@ impl Client {
     None
   }
 
+  pub(crate) fn splash() {
+    match terminal::enable_raw_mode() {
+      Ok(()) =>  {
+        let mut terminal = ratatui::init();
+        terminal.draw(|frame| {
+          let full_area = frame.size();
+          let splash: Text = Text::from(splash::raw_splash()).fg(Color::Rgb(215,175,0));
+          let height: u16 = splash.height() as u16;
+          let width: u16 = splash.width() as u16;
+          let centred_area = full_area.centered_horizontally(Constraint::Length(width)).centered_vertically(Constraint::Length(height));
+          let paragraph = Paragraph::new(splash).alignment(Alignment::Center);
+          frame.render_widget(paragraph, full_area);
+        });
+        thread::sleep(Duration::from_secs(2));
+        ratatui::restore();
+      },
+      Err(_) => {},
+    }
+  }
+
   pub(crate) fn display(&self, source: &Url, response: &Response) -> Option<String> {
     let payload: Option<(String,String)> = response.text();
     let mut request: Option<String> = None;
     match payload {
       Some((subtype,text)) => {
+        match terminal::enable_raw_mode() {
+          Ok(()) => {},
+          Err(_) => return None,
+        }
         let mut terminal = ratatui::init();
+        let mut scroll_pos: usize = 0;
         let lines: Vec<&str> = text.lines().collect();
         let (lines,links) = Self::format(subtype,lines);
-        let paragraph: Paragraph = Paragraph::new(lines);
         loop {
+          let block = Block::bordered()
+            .title(Line::from(format!(" {} [{}] ",APP_NAME,source)).centered())
+            .title_bottom(Line::from("q to quit, number for link").centered())
+            .borders(Borders::ALL)
+            .border_type(BorderType::Double)
+            .border_style(Style::default().add_modifier(Modifier::BOLD))
+            .padding(Padding::new(1,1,1,1));
+          let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((scroll_pos as u16,0)).block(block);
+          let mut scrollbar_state: ScrollbarState = ScrollbarState::new(lines.len()).position(scroll_pos);
+          let mut page_len: usize = 0;
           terminal.draw(|frame| {
+            page_len = frame.area().height as usize - 1;
             frame.render_widget(&paragraph,frame.area());
+            frame.render_stateful_widget(
+              Scrollbar::new(ScrollbarOrientation::VerticalRight),
+              frame.area().inner(Margin { vertical: 1, horizontal: 0 }),
+              &mut scrollbar_state,
+            );
           });
           match event::poll(Duration::from_millis(250)) {
             Ok(b) => if b {
               if let Ok(Event::Key(key)) = event::read() {
                 if key.kind == KeyEventKind::Press {
-                  if let KeyCode::Char(c) = key.code {
-                    if let Some(digit) = c.to_digit(10) {
-                      let mut link: String = links[digit as usize - 1].clone();
-                      link = util::build_abs_url(&source,&link);
-                      log::debug!("Link {} chosen, link is: {}",digit,link);
-                      request = Some(link);
-                      break;
-                    } else {
-                      match key.code {
-                        KeyCode::Char('q') => break,
-                        KeyCode::Esc       => break,
-                        _                  => {},
+                  match key.code {
+                    KeyCode::Char(c) if c.to_digit(10).is_some() => {
+                      let index: usize = c.to_digit(10).unwrap() as usize;
+                      log::debug!("Length: {}, Index: {}",links.len(),index);
+                      if index < links.len() {
+                        let mut link: String = links[index - 1].clone();
+                        link = util::build_abs_url(&source,&link);
+                        log::debug!("Link {} chosen, link is: {}",c,link);
+                        request = Some(link);
+                        break;
                       }
-                    }
-                  };
+                    },
+                    KeyCode::Esc | KeyCode::Char('q') => break,
+                    KeyCode::Enter | KeyCode::Down | KeyCode::Char('j') => {
+                      scroll_pos = scroll_pos.saturating_add(1).min(lines.len()-page_len+2);
+                      scrollbar_state.position(scroll_pos);
+                    },
+                    KeyCode::Up | KeyCode::Char('k') => {
+                      scroll_pos = scroll_pos.saturating_sub(1);
+                      scrollbar_state.position(scroll_pos);
+                    },
+                    KeyCode::Char(' ') | KeyCode::PageDown | KeyCode::Char('v') => {
+                      scroll_pos = scroll_pos.saturating_add(page_len).min(lines.len()-page_len+2);
+                      scrollbar_state.position(scroll_pos);
+                    },
+                    KeyCode::PageUp | KeyCode::Char('b') => {
+                      scroll_pos = scroll_pos.saturating_sub(page_len);
+                      scrollbar_state.position(scroll_pos);
+                    },
+                    KeyCode::Home | KeyCode::Char('g') => {
+                      scroll_pos = 0;
+                      scrollbar_state.position(scroll_pos);
+                    },
+                    KeyCode::End | KeyCode::Char('G') => {
+                      scroll_pos = lines.len()-page_len+2;
+                      scrollbar_state.position(scroll_pos);
+                    },
+                    _ => {},
+                  }
                 }
               }
             },

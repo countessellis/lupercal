@@ -169,6 +169,8 @@ impl Config {
       match arg.as_str() {
         // Ignore flags processed elsewhere:
         "--config" => {},
+        "--lock" => {},
+        "--unlock" => {},
         // Process general options:
         "--mode" => match args.next() {
           Some(mode) => config.mode = match Mode::from_str(mode.as_str()) {

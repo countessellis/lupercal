@@ -11,6 +11,8 @@ use std::fs;
 use openssl::symm::Cipher;
 use std::fs::File;
 use std::io::Write;
+use std::env::{args,Args};
+use std::path::Path;
 
 use crate::config::*;
 use crate::defaults::DEFAULT_KEY_SIZE;
@@ -46,6 +48,14 @@ impl Store {
       },
       cache: HashMap::<String,X509>::new(),
     };
+    let mut args: Args = args();
+    while let Some(arg) = args.next() {
+      match arg.as_str() {
+        "--lock"   => store.keys.lock(),
+        "--unlock" => store.keys.unlock(),
+        _ => {},
+      }
+    }
     log::info!("Successfully initialized key store.");
     Ok(store)
   }
@@ -265,5 +275,52 @@ impl Keys {
       Err(err) => log::error!("Failed to write cert to {}: {}",cert_file,err),
     }
     Ok(cert)
+  }
+
+  fn unlock(&self) {
+    log::info!("Unlocking private key.");
+    let name: String = match self.config.mode {
+      Mode::Server => self.config.server_name.clone(),
+      Mode::Client => self.config.client_name.clone(),
+    };
+    let store_dir: String = match self.config.mode {
+      Mode::Server => self.config.server_store_dir.clone(),
+      Mode::Client => self.config.client_store_dir.clone(),
+    };
+    let pkey_unlocked: String   = format!("{}{}.unlocked.pem",store_dir,name);
+    let cipher: Cipher = Cipher::aes_256_cbc();
+    match self.keypair.private_key_to_pem() {
+      Ok(pem) => {
+        match File::create(&pkey_unlocked) {
+          Ok(mut file) => match file.write_all(&pem) {
+            Ok(_) => {},
+            Err(err) => log::error!("Failed to write unlocked private key to {}: {}",pkey_unlocked,err),
+          },
+          Err(err) => log::error!("Failed to create unlocked private key file at {}: {}",pkey_unlocked,err),
+        }
+      },
+      Err(err) => log::error!("Failed to convert private key to pem: {}",err),
+    }
+    log::info!("Successfully unlocked private key.");
+  }
+
+  fn lock(&self) {
+    log::info!("Locking private key.");
+    let name: String = match self.config.mode {
+      Mode::Server => self.config.server_name.clone(),
+      Mode::Client => self.config.client_name.clone(),
+    };
+    let store_dir: String = match self.config.mode {
+      Mode::Server => self.config.server_store_dir.clone(),
+      Mode::Client => self.config.client_store_dir.clone(),
+    };
+    let pkey_unlocked: String   = format!("{}{}.unlocked.pem",store_dir,name);
+    let path: &Path = Path::new(&pkey_unlocked);
+    if path.exists() {
+      match fs::remove_file(path) {
+        Ok(())   => log::info!("Successfully locked private key."),
+        Err(err) => log::error!("Failed to lock private key: {}",err),
+      }
+    }
   }
 }
