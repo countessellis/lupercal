@@ -290,7 +290,7 @@ impl Client {
               },
               line if line.starts_with(">") => {
                 let line: &str = line.strip_prefix(">").unwrap_or(line).trim_start();
-                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                let lines: Vec<String> = wrap(line,width-2).iter().map(|s| format!("  {}",s)).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().italic().dim()));
                 }
