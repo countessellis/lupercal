@@ -1,7 +1,6 @@
 pub mod client;
 pub mod config;
 pub mod defaults;
-pub mod display;
 pub mod init;
 pub mod logger;
 pub mod mode;

@@ -1,7 +1,6 @@
 # TODO
 
-* Handling of quote lines.
-* Handling of raw blocks.
+* Horivontal scroll to support raw.
 * Caching and checking of certs.
 * Saving of non-text files.
 * Maybe 's' for save even with current.

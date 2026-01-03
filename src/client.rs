@@ -5,7 +5,6 @@ use std::env::args;
 use std::net::TcpStream;
 use openssl::ssl::{SslConnector,SslVerifyMode};
 use std::time::Duration;
-use color_eyre::{eyre::Context, Result};
 use ratatui::{
   crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
   crossterm::terminal,
@@ -18,10 +17,10 @@ use ratatui::style::Modifier;
 use ratatui::prelude::*;
 use ratatui::layout::{Constraint, Flex, Rect};
 use std::thread;
+use textwrap::wrap;
 
 use crate::config::*;
 use crate::defaults::*;
-use crate::display::*;
 use crate::response::*;
 use crate::splash;
 use crate::store::*;
@@ -84,7 +83,7 @@ impl Client {
                       Ok(mut tunnel) => {
                         match tunnel.ssl_write(format!("{}\r\n",request).as_bytes()) {
                           Ok(_) => {
-                            let mut buffer: [u8;1024] = [0;1024];
+                            let mut buffer: [u8;16384] = [0;16384];
                             match tunnel.ssl_read(&mut buffer) {
                               Ok(len) => {
                                 match Response::from_bytes(&buffer.to_vec()) {
@@ -139,7 +138,7 @@ impl Client {
       Ok(()) =>  {
         let mut terminal = ratatui::init();
         terminal.draw(|frame| {
-          let full_area = frame.size();
+          let full_area = frame.area();
           let splash: Text = Text::from(splash::raw_splash()).fg(Color::Rgb(215,175,0));
           let height: u16 = splash.height() as u16;
           let width: u16 = splash.width() as u16;
@@ -165,8 +164,12 @@ impl Client {
         }
         let mut terminal = ratatui::init();
         let mut scroll_pos: usize = 0;
-        let lines: Vec<&str> = text.lines().collect();
-        let (lines,links) = Self::format(subtype,lines);
+        let mut line_count: usize = 0;
+        let mut link_count: usize = 0;
+        let mut page_len: usize = 0;
+        let mut scrollbar_state: ScrollbarState  = Default::default();
+        let mut lines: Vec<Line> = Vec::new();
+        let mut links: Vec<String> = Vec::new();
         loop {
           let block = Block::bordered()
             .title(Line::from(format!(" {} [{}] ",APP_NAME,source)).centered())
@@ -175,10 +178,13 @@ impl Client {
             .border_type(BorderType::Double)
             .border_style(Style::default().add_modifier(Modifier::BOLD))
             .padding(Padding::new(1,1,1,1));
-          let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((scroll_pos as u16,0)).block(block);
-          let mut scrollbar_state: ScrollbarState = ScrollbarState::new(lines.len()).position(scroll_pos);
-          let mut page_len: usize = 0;
           terminal.draw(|frame| {
+            let unformatted: Vec<&str> = text.lines().collect();
+            (lines,links) = Self::format(subtype.clone(),unformatted,(frame.area().width-4) as usize);
+            line_count = lines.len();
+            link_count = links.len();
+            let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((scroll_pos as u16,0)).block(block);
+            scrollbar_state.content_length(line_count).position(scroll_pos);
             page_len = frame.area().height as usize - 1;
             frame.render_widget(&paragraph,frame.area());
             frame.render_stateful_widget(
@@ -187,6 +193,7 @@ impl Client {
               &mut scrollbar_state,
             );
           });
+          let max_scroll: usize = if line_count+2 < page_len { 0 } else { line_count+2-page_len };
           match event::poll(Duration::from_millis(250)) {
             Ok(b) => if b {
               if let Ok(Event::Key(key)) = event::read() {
@@ -194,8 +201,8 @@ impl Client {
                   match key.code {
                     KeyCode::Char(c) if c.to_digit(10).is_some() => {
                       let index: usize = c.to_digit(10).unwrap() as usize;
-                      log::debug!("Length: {}, Index: {}",links.len(),index);
-                      if index < links.len() {
+                      log::debug!("Length: {}, Index: {}",link_count,index);
+                      if index < link_count {
                         let mut link: String = links[index - 1].clone();
                         link = util::build_abs_url(&source,&link);
                         log::debug!("Link {} chosen, link is: {}",c,link);
@@ -205,7 +212,7 @@ impl Client {
                     },
                     KeyCode::Esc | KeyCode::Char('q') => break,
                     KeyCode::Enter | KeyCode::Down | KeyCode::Char('j') => {
-                      scroll_pos = scroll_pos.saturating_add(1).min(lines.len()-page_len+2);
+                      scroll_pos = scroll_pos.saturating_add(1).min(max_scroll);
                       scrollbar_state.position(scroll_pos);
                     },
                     KeyCode::Up | KeyCode::Char('k') => {
@@ -213,7 +220,7 @@ impl Client {
                       scrollbar_state.position(scroll_pos);
                     },
                     KeyCode::Char(' ') | KeyCode::PageDown | KeyCode::Char('v') => {
-                      scroll_pos = scroll_pos.saturating_add(page_len).min(lines.len()-page_len+2);
+                      scroll_pos = scroll_pos.saturating_add(page_len).min(max_scroll);
                       scrollbar_state.position(scroll_pos);
                     },
                     KeyCode::PageUp | KeyCode::Char('b') => {
@@ -225,7 +232,7 @@ impl Client {
                       scrollbar_state.position(scroll_pos);
                     },
                     KeyCode::End | KeyCode::Char('G') => {
-                      scroll_pos = lines.len()-page_len+2;
+                      scroll_pos = max_scroll;
                       scrollbar_state.position(scroll_pos);
                     },
                     _ => {},
@@ -246,52 +253,89 @@ impl Client {
     request
   }
 
-  fn format(subtype: String, lines: Vec<&str>) -> (Vec<Line>,Vec<String>) {
+  fn format(subtype: String, lines: Vec<&str>, width: usize) -> (Vec<Line>,Vec<String>) {
     let mut formatted: Vec<Line> = Vec::new();
     let mut links: Vec<String> = Vec::new();
+    let mut raw: bool = false;
     for line in lines {
       match subtype.as_str() {
         "gemini" | "gmi" => {
-          formatted.push(match line {
-            line if line.starts_with("###") => {
-              let line: &str = line.strip_prefix("###").unwrap_or(line).trim_start();
-              Line::style(line.into(),Style::new().add_modifier(Modifier::ITALIC))
-            },
-              line if line.starts_with("##") => {
-              let line: &str = line.strip_prefix("##").unwrap_or(line).trim_start();
-              Line::style(line.into(),Style::new().add_modifier(Modifier::UNDERLINED))
-            },
-            line if line.starts_with("#") => {
-              let line: &str = line.strip_prefix("#").unwrap_or(line).trim_start();
-              Line::style(line.into(),Style::new().add_modifier(Modifier::BOLD))
-            },
-            line if line.starts_with("=>") => {
-              let line: &str = line.strip_prefix("=>").unwrap_or(line).trim_start();
-              let parts: Vec<&str> = line.split_whitespace().collect();
-              let link: &str = parts[0];
-              links.push(link.to_string());
-              let text: String = format!("[{}] {}",links.len(),if parts.len() > 1 {
-                parts[1..].join(" ")
-              } else {
-                link.to_string()
-              });
-              Line::style(text.into(),Style::new().add_modifier(Modifier::UNDERLINED).add_modifier(Modifier::REVERSED))
-            },
-            line if line.starts_with("*") => {
-              let line: &str = line.strip_prefix("*").unwrap_or(line).trim_start();
-              let line: String = format!("{} {}","\u{2022}",line);
-              Line::raw(line)
-            },
-            line if line.starts_with(">") => {
-              let line: &str = line.strip_prefix("###").unwrap_or(line).trim_start();
-              Line::raw(line)
-            },
-            _   => {
-              Line::raw(line)
-            },
-          });
+          if raw {
+            if line.starts_with("```") {
+              raw ^= true;
+            }
+            formatted.push(Line::raw(line));
+          } else {
+            match line {
+              line if line.starts_with("###") => {
+                let line: &str = line.strip_prefix("###").unwrap_or(line).trim_start();
+                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                for line in lines {
+                  formatted.push(Line::style(line.into(),Style::new().italic()));
+                }
+              },
+                line if line.starts_with("##") => {
+                let line: &str = line.strip_prefix("##").unwrap_or(line).trim_start();
+                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                for line in lines {
+                  formatted.push(Line::style(line.into(),Style::new().underlined()));
+                }
+              },
+              line if line.starts_with("#") => {
+                let line: &str = line.strip_prefix("#").unwrap_or(line).trim_start();
+                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                for line in lines {
+                  formatted.push(Line::style(line.into(),Style::new().bold()));
+                }
+              },
+              line if line.starts_with(">") => {
+                let line: &str = line.strip_prefix(">").unwrap_or(line).trim_start();
+                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                for line in lines {
+                  formatted.push(Line::style(line.into(),Style::new().italic().dim()));
+                }
+              },
+              line if line.starts_with("=>") => {
+                let line: &str = line.strip_prefix("=>").unwrap_or(line).trim_start();
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                let link: &str = parts[0];
+                links.push(link.to_string());
+                let text: String = format!("[{}] {}",links.len(),if parts.len() > 1 {
+                  parts[1..].join(" ")
+                } else {
+                  link.to_string()
+                });
+                let lines: Vec<String> = wrap(&text,width).iter().map(|s| s.to_string()).collect();
+                for line in lines {
+                  formatted.push(Line::style(line.into(),Style::new().underlined().reversed()));
+                }
+              },
+              line if line.starts_with("*") => {
+                let line: &str = line.strip_prefix("*").unwrap_or(line).trim_start();
+                let line: String = format!("{} {}","\u{2022}",line);
+                let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
+                for line in lines {
+                  formatted.push(Line::raw(line));
+                }
+              },
+              line if line.starts_with("```") => {
+                raw ^= true;
+              },
+              _   => {
+                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                for line in lines {
+                  formatted.push(Line::raw(line));
+                }
+              },
+            };
+          }
         },
-        _ => formatted.push(Line::raw(line)),
+        _ => {
+          let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+          for line in lines {
+            formatted.push(Line::raw(line));
+          }
+        },
       }
     }
     (formatted,links)
