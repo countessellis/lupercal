@@ -52,5 +52,6 @@ pub(crate) fn build_abs_url(source: &Url, link: &String) -> String {
   } else {
     link
   };
+  log::error!("{}://{}/{}",scheme,host,path);
   format!("{}://{}/{}",scheme,host,path)
 }

@@ -1,6 +1,10 @@
 [package]
 name = "lupercal"
+licence = "MIT"
 authors = ["Bethany Davis <ellis@despoena.com>"]
+description = "A single binary console based Gemini Protocol server and client."
+repository = "https://github.com/countessellis/lupercal"
+homepage = "https://github.com/countessellis/lupercal"
 readme = "README.md"
 version = "0.1.0"
 edition = "2024"
@@ -28,6 +32,8 @@ ratatui = "0.30.0"
 textwrap = "0.16.2"
 tui-logger = "0.18.0"
 gag = "1.0.0"
+dirs = "6.0.0"
+shellexpand = "3.1.1"
 
 [build-dependencies]
 chrono = "0.4.42"

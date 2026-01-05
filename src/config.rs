@@ -25,6 +25,38 @@ pub struct Config {
 
 impl Config {
   pub(crate) fn defaults() -> Config {
+    let server_cache_dir: String = match dirs::cache_dir() {
+      Some(cache) => {
+        format!("{}/{}/server",cache.display().to_string(),BUILD_NAME)
+      },
+      None => {
+        DEFAULT_SERVER_CACHE_DIR.to_string()
+      },
+    };
+    let server_store_dir: String = match dirs::cache_dir() {
+      Some(cache) => {
+        format!("{}/{}/server/store/",cache.display().to_string(),BUILD_NAME)
+      },
+      None => {
+        DEFAULT_SERVER_STORE_DIR.to_string()
+      },
+    };
+    let client_cache_dir: String = match dirs::cache_dir() {
+      Some(cache) => {
+        format!("{}/{}/client",cache.display().to_string(),BUILD_NAME)
+      },
+      None => {
+        DEFAULT_CLIENT_CACHE_DIR.to_string()
+      },
+    };
+    let client_store_dir: String = match dirs::cache_dir() {
+      Some(cache) => {
+        format!("{}/{}/client/store/",cache.display().to_string(),BUILD_NAME)
+      },
+      None => {
+        DEFAULT_CLIENT_STORE_DIR.to_string()
+      },
+    };
     Config {
       // General:
       mode:             Default::default(),
@@ -32,12 +64,12 @@ impl Config {
       server_name:      DEFAULT_SERVER_NAME.to_string(),
       listen_addr:      DEFAULT_LISTEN_ADDR.to_string(),
       content_dir:      DEFAULT_CONTENT_DIR.to_string(),
-      server_cache_dir: DEFAULT_SERVER_CACHE_DIR.to_string(),
-      server_store_dir: DEFAULT_SERVER_STORE_DIR.to_string(),
+      server_cache_dir: server_cache_dir,
+      server_store_dir: server_store_dir,
       // Client related:
       client_name:      DEFAULT_CLIENT_NAME.to_string(),
-      client_cache_dir: DEFAULT_CLIENT_CACHE_DIR.to_string(),
-      client_store_dir: DEFAULT_CLIENT_STORE_DIR.to_string(),
+      client_cache_dir: client_cache_dir,
+      client_store_dir: client_store_dir,
     }
   }
   

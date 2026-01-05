@@ -16,6 +16,8 @@ use tui_logger::{TuiLoggerWidget,TuiWidgetState};
 use std::thread;
 use textwrap::wrap;
 use gag::Gag;
+use std::io::ErrorKind;
+use openssl::ssl::ErrorCode;
 
 use crate::config::*;
 use crate::defaults::*;
@@ -72,22 +74,42 @@ impl Client {
                         match tunnel.ssl_write(&request.as_bytes()) {
                           Ok(_) => {
                             let mut buffer: [u8;16384] = [0;16384];
-                            match tunnel.ssl_read(&mut buffer) {
-                              Ok(len) => {
-                                //log::debug!("Raw response: {:?}",buffer);
-                                match Response::from_bytes(&buffer.to_vec()) {
-                                  Ok(response) => {
-                                    log::debug!("Response: {}",response);
-                                    return self.display(&request,&response);
-                                  },
-                                  Err(err) => {
-                                    log::error!("Failed to parse response from {}: {}",request.next,err);  
-                                  },
-                                }
-                              },
-                              Err(err) => {
-                                log::error!("Failed to read response from {}: {}",request.next,err);
-                              },
+                            let mut bytes: Vec<u8> = Vec::new();
+                            loop {
+                              match tunnel.ssl_read(&mut buffer) {
+                                Ok(0) => {
+                                  match Response::from_bytes(&bytes) {
+                                    Ok(response) => {
+                                      return self.display(&request,&response);
+                                    },
+                                    Err(err) => {
+                                      log::error!("Failed to parse response from {}: {}",request.next,err);  
+                                    },
+                                  }
+                                },
+                                Ok(len) => {
+                                  bytes.extend_from_slice(&buffer[..len]);
+                                },
+                                Err(err) => {
+                                  if err.code() == ErrorCode::ZERO_RETURN {
+                                    match Response::from_bytes(&bytes) {
+                                      Ok(response) => {
+                                        return self.display(&request,&response);
+                                      },
+                                      Err(err) => {
+                                        log::error!("Failed to parse response from {}: {}",request.next,err);  
+                                      },
+                                    }
+                                  }
+                                  if let Some(io_err) = err.io_error() {
+                                    if io_err.kind() == std::io::ErrorKind::Interrupted {
+                                      continue;
+                                    }
+                                  }
+                                  log::error!("Failed to read response from {}: {}",request.next,err);
+                                  break;
+                                },
+                              }
                             }
                           },
                           Err(err) => {
@@ -158,11 +180,12 @@ impl Client {
             let mut link_count: usize = 0;
             let mut page_len: usize = 0;
             let mut scrollbar_state: ScrollbarState  = Default::default();
-            let mut logger_state = TuiWidgetState::new().set_default_display_level(DEFAULT_LOG_LEVEL);
+            let mut logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
             let mut lines: Vec<Line> = Vec::new();
             let mut links: Vec<String> = Vec::new();
             'main: loop {
               Gag::stderr().unwrap();
+              Gag::stdout().unwrap();
               let block = Block::bordered()
                 .title(Line::from(format!(" {} [{}] ",APP_NAME,source.next)).centered())
                 .title_bottom(Line::from("q to quit, number for link").centered())
@@ -226,11 +249,10 @@ impl Client {
                                       KeyCode::Enter => {
                                         let link_number: String = link_number.into_iter().collect();
                                         if let Ok(index) = link_number.parse::<usize>() {
-                                          log::debug!("Length: {}, Index: {}",link_count,index);
-                                          if index < link_count {
+                                          if index <= link_count {
                                             let mut link: String = links[index - 1].clone();
                                             link = util::build_abs_url(&url,&link);
-                                            log::debug!("Link {} chosen, link is: {}",c,link);
+                                            log::info!("Link {} chosen, link is: {}",c,link);
                                             match Url::parse(&link) {
                                               Ok(url) => {
                                                 match url.scheme() {
@@ -238,7 +260,10 @@ impl Client {
                                                     request = Some(Request::new(&self.config,&link,&Some(source.clone())));
                                                     break 'main;
                                                   },
-                                                  _ => break,
+                                                  _ => {
+                                                    log::error!("Using {} protocol is not supported, only gemini is.",url.scheme());
+                                                    break;
+                                                  },
                                                 }
                                               },
                                               Err(_) => break,

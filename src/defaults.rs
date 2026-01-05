@@ -8,6 +8,7 @@ pub(crate) const BUILD_TIME:  &str = env!("BUILD_TIME");
 pub(crate) const BUILD_ID:    &str = env!("BUILD_ID");
 
 pub(crate) const DEFAULT_LOG_LEVEL: LevelFilter                                            = LevelFilter::Debug; // LevelFilter::Info;
+pub(crate) const TUI_LOG_LEVEL: LevelFilter                                                = LevelFilter::Info;
 pub(crate) const DEFAULT_LOG_FORMAT_TIMESTAMP: Option<env_logger::fmt::TimestampPrecision> = Some(TimestampPrecision::Millis); // None;
 pub(crate) const DEFAULT_LOG_FORMAT_LEVEL: bool                                            = true; // false;
 pub(crate) const DEFAULT_LOG_FORMAT_TARGET: bool                                           = true; // false;
@@ -24,5 +25,6 @@ pub(crate) const DEFAULT_CLIENT_CACHE_DIR: &str = "cache/client";
 pub(crate) const DEFAULT_SERVER_STORE_DIR: &str = "cache/server/store/";
 pub(crate) const DEFAULT_CLIENT_STORE_DIR: &str = "cache/client/store/";
 pub(crate) const DEFAULT_CONFIG_DIR: &str       = "config/";
-pub(crate) const DEFAULT_SERVER_CONFIG: &str    = "config/server.cfg";
-pub(crate) const DEFAULT_CLIENT_CONFIG: &str    = "config/client.cfg";
+pub(crate) const DEFAULT_SERVER_CONFIG: &str    = "server.cfg";
+pub(crate) const DEFAULT_CLIENT_CONFIG: &str    = "client.cfg";
+

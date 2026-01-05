@@ -37,7 +37,7 @@ pub fn init() {
         false => {},
       }
       if metadata.len() > 0 {
-        //writeln!(buf,"[{}] {}",metadata.join(" "),record.args())?;
+        writeln!(buf,"[{}] {}",metadata.join(" "),record.args())?;
       } else {
         writeln!(buf,"{}",record.args())?;
       }
