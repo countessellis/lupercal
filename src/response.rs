@@ -69,7 +69,8 @@ impl Response {
 
   pub(crate) fn text(&self) -> Option<(String,String)> {
     let head: String = self.head.clone();
-    let types: Vec<&str> = head.split("/").collect();
+    let fields: Vec<&str> = head.split(";").collect();
+    let types: Vec<&str> = fields[0].split("/").collect();
     match types[0] {
       "text" => {
         match String::from_utf8(self.body.clone()) {

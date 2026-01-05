@@ -10,6 +10,7 @@ use std::path::Path;
 
 use crate::config::*;
 use crate::defaults::*;
+use crate::request::*;
 use crate::response::*;
 use crate::store::*;
 
@@ -79,10 +80,10 @@ impl Server {
                     Ok(mut stream) => {
                       let response: Response = match stream.ssl_read(&mut buffer) {
                         Ok(len) => {
-                          match str::from_utf8(&buffer) {
-                            Ok(request) => {
-                              log::debug!("Request: {}",request.trim_end());
-                              match Url::parse(request.trim_end()) {
+                          match Request::from_bytes(&config,&buffer) {
+                            Some(request) => {
+                              log::debug!("Request: {}, Length: {}",request.next,len);
+                              match Url::parse(request.next.as_str()) {
                                 Ok(url) => {
                                   let mut file: String = format!("{}{}",config.content_dir,url.path());
                                   if file.ends_with("/") { file.truncate(file.len()-1); }
@@ -129,8 +130,7 @@ impl Server {
                                 },
                               }
                             },
-                            Err(err) => {
-                              log::error!("Failed to parse request: {}",err);
+                            None => {
                               Response::new(&ResponseCode::FailBadReq,&String::from("Bad Request"),&Vec::new())
                             },
                           }

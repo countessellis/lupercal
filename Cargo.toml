@@ -26,6 +26,8 @@ rpassword = "7.4.0"
 color-eyre = "0.6.5"
 ratatui = "0.30.0"
 textwrap = "0.16.2"
+tui-logger = "0.18.0"
+gag = "1.0.0"
 
 [build-dependencies]
 chrono = "0.4.42"

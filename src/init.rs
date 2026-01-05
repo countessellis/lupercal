@@ -2,6 +2,7 @@ use crate::client::*;
 use crate::config::*;
 use crate::defaults::*;
 use crate::mode::*;
+use crate::request::*;
 use crate::splash::*;
 use crate::server::*;
 
@@ -26,11 +27,11 @@ pub fn run() {
       let config: Config = Config::from_file(&DEFAULT_CLIENT_CONFIG.to_string());
       match Client::new(&config) {
         Some(client) => {
-          match Client::request_from_args() {
+          match Request::from_args(&config) {
             Some(request) => {
-              let mut request: Option<String> = client.request(&request);
-              while let Some(link) = request {
-                request = client.request(&link);
+              let mut request: Option<Request> = client.request(&request);
+              while let Some(next) = request {
+                request = client.request(&next);
               }
             },
             None          => log::error!("No request provided."),

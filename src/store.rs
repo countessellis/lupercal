@@ -6,9 +6,9 @@ use openssl::pkey::{PKey,Private};
 use openssl::error::ErrorStack;
 use openssl::asn1::Asn1Time;
 use openssl::hash::MessageDigest;
+use openssl::symm::Cipher;
 use rpassword::prompt_password;
 use std::fs;
-use openssl::symm::Cipher;
 use std::fs::File;
 use std::io::Write;
 use std::env::{args,Args};
@@ -214,8 +214,7 @@ impl Keys {
         };
         if !passphrase.is_empty() {
           let pkey_locked: String   = format!("{}{}.locked.pem",store_dir,name);
-          let cipher: Cipher = Cipher::aes_256_cbc();
-          match keypair.private_key_to_pem_passphrase(cipher, passphrase.as_bytes()) {
+          match keypair.private_key_to_pem_passphrase(Cipher::aes_256_cbc(), passphrase.as_bytes()) {
             Ok(pem) => {
               match File::create(&pkey_locked) {
                 Ok(mut file) => match file.write_all(&pem) {
@@ -288,7 +287,6 @@ impl Keys {
       Mode::Client => self.config.client_store_dir.clone(),
     };
     let pkey_unlocked: String   = format!("{}{}.unlocked.pem",store_dir,name);
-    let cipher: Cipher = Cipher::aes_256_cbc();
     match self.keypair.private_key_to_pem() {
       Ok(pem) => {
         match File::create(&pkey_unlocked) {

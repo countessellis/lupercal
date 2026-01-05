@@ -4,6 +4,7 @@ pub mod defaults;
 pub mod init;
 pub mod logger;
 pub mod mode;
+pub mod request;
 pub mod response;
 pub mod server;
 pub mod splash;
