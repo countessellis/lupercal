@@ -5,7 +5,6 @@ use openssl::pkey::PKey;
 use std::io::ErrorKind;
 use std::io::Write;
 use std::fs;
-use url::Url;
 use std::path::Path;
 
 use crate::config::*;
@@ -83,8 +82,8 @@ impl Server {
                           match Request::from_bytes(&config,&buffer) {
                             Some(request) => {
                               log::debug!("Request: {}, Length: {}",request.next,len);
-                              match Url::parse(request.next.as_str()) {
-                                Ok(url) => {
+                              match request.as_url() {
+                                Some(url) => {
                                   let mut file: String = format!("{}{}",config.content_dir,url.path());
                                   if file.ends_with("/") { file.truncate(file.len()-1); }
                                   let path = Path::new(&file);
@@ -106,38 +105,39 @@ impl Server {
                                       match fs::read(&file) {
                                         Ok(content) => {
                                           log::info!("Returning contents of {}.",file);
-                                          Response::new(&ResponseCode::Success,&String::from(mimetype),&content)
+                                          Response::new(&ResponseCode::Success,&String::from(mimetype),&content,&Some(request))
                                         },
                                         Err(err) => {
                                           log::error!("Failed to read file {}: {}",file,err);
-                                          Response::new(&ResponseCode::Fail,&String::from("Server Error"),&Vec::new())
+                                          Response::new(&ResponseCode::Fail,&String::from("Server Error"),&Vec::new(),&Some(request))
                                         },
                                       }
                                     },
                                     Ok(false) => {
                                       log::error!("File {} does not exist.",file);
-                                      Response::new(&ResponseCode::FailNotFound,&format!("{} not found",url.path()),&Vec::new())
+                                      Response::new(&ResponseCode::FailNotFound,&format!("{} not found",url.path()),&Vec::new(),&Some(request))
                                     },
                                     Err(err) => {
                                       log::error!("Error testing if {} exists: {}",file,err);
-                                      Response::new(&ResponseCode::Fail,&String::from("Server Failure"),&Vec::new())
+                                      Response::new(&ResponseCode::Fail,&String::from("Server Failure"),&Vec::new(),&Some(request))
                                     }
                                   }
                                 },
-                                Err(err) => {
-                                  log::error!("Failed to parse uri from request: {}",err);
-                                  Response::new(&ResponseCode::FailBadReq,&String::from("Invalid URI"),&Vec::new())
+                                None => {
+                                  log::error!("Failed to parse uri from request.");
+                                  Response::new(&ResponseCode::FailBadReq,&String::from("Invalid URI"),&Vec::new(),&Some(request))
                                 },
                               }
                             },
                             None => {
-                              Response::new(&ResponseCode::FailBadReq,&String::from("Bad Request"),&Vec::new())
+                              log::error!("Request format wrong.");
+                              Response::new(&ResponseCode::FailBadReq,&String::from("Bad Request"),&Vec::new(),&None)
                             },
                           }
                         },
                         Err(err) => {
                           log::error!("Failed to read request: {}",err);
-                          Response::new(&ResponseCode::FailPerm,&String::from("Failed to read request"),&Vec::new())
+                          Response::new(&ResponseCode::FailPerm,&String::from("Failed to read request"),&Vec::new(),&None)
                         },
                       };
                       log::debug!("Response: {}",response);

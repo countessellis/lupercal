@@ -1,5 +1,6 @@
 use std::fmt;
 use std::env::{args,Args};
+use url::Url;
 
 use crate::config::*;
 
@@ -48,6 +49,13 @@ impl Request {
         log::error!("Failed to parse request: {}",err);
         None
       },
+    }
+  }
+
+  pub(crate) fn as_url(&self) -> Option<Url> {
+    match Url::parse(self.next.as_str()) {
+      Ok(url) => Some(url),
+      Err(_)  => None,
     }
   }
 }

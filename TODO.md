@@ -1,9 +1,8 @@
 # TODO
 
+* Redesign so doesn't exit on save of non-text link, and for display to be persistent instead of constant in and out, with thread and channel.
 * Horizontal scroll to support raw.
 * Caching and checking of certs.
-* Saving of non-text files.
-* Maybe 's' for save even with current.
 * Add the proxy (this won't take much since it's essentially the client for origin pull and the server for front end).
 * Convert mode that takes a gemtext doc and converts it to a very simple static html doc with consistent format, no javascript, and pointing to /default.css for style. 
 

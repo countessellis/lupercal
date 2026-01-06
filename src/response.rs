@@ -1,4 +1,11 @@
 use std::fmt;
+use std::fs;
+use url::Url;
+use std::path::Path;
+
+use crate::config::*;
+use crate::mode::*;
+use crate::request::*;
 
 ///////////// Response
 
@@ -7,6 +14,7 @@ pub(crate) struct Response {
   pub(crate) code: ResponseCode,
   pub(crate) head: String,
   pub(crate) body: Vec<u8>,
+  pub(crate) request: Option<Request>,
 }
 
 impl fmt::Display for Response {
@@ -23,8 +31,8 @@ impl fmt::Display for Response {
 }
 
 impl Response {
-  pub(crate) fn new(code: &ResponseCode, head: &String, body: &Vec<u8>) -> Response {
-    Response { code: code.clone(), head: head.clone(), body: body.clone() }
+  pub(crate) fn new(code: &ResponseCode, head: &String, body: &Vec<u8>, request: &Option<Request>) -> Response {
+    Response { code: code.clone(), head: head.clone(), body: body.clone(), request: request.clone() }
   }
 
   pub(crate) fn into_bytes(&self) -> Vec<u8> {
@@ -33,7 +41,7 @@ impl Response {
     bytes
   }
 
-  pub(crate) fn from_bytes(bytes: &Vec<u8>) -> Result<Response,String> {
+  pub(crate) fn from_bytes(request: &Option<Request>,bytes: &Vec<u8>) -> Result<Response,String> {
     let (header,body) = match bytes.windows(2).position(|window| window == b"\r\n").map(|index| {
       (
         &bytes[..index],
@@ -61,7 +69,7 @@ impl Response {
             ResponseCode::Invalid
           },
         };
-        Ok(Response { code: code, head: head[1..].join(" "), body: body.to_vec() })
+        Ok(Response { code: code, head: head[1..].join(" "), body: body.to_vec(), request: request.clone() })
       },
       Err(err) => Err(format!("Failed to parse response: {}",err)),
     }
@@ -79,6 +87,59 @@ impl Response {
         }
       },
       _ => None
+    }
+  }
+
+  pub(crate) fn datatype(&self) -> Option<(String,String)> {
+    let head: String = self.head.clone();
+    let fields: Vec<&str> = head.split(";").collect();
+    let types: Vec<&str> = fields[0].split("/").collect();
+    if types.len() == 2 {
+      Some((types[0].to_string(),types[1].to_string()))
+    } else {
+      None
+    }
+  }
+
+  pub(crate) fn as_url(&self) -> Option<Url> {
+    match &self.request {
+      Some(request) => request.as_url(),
+      None => None,
+    }
+  }
+
+  pub(crate) fn save(&self,config: &Config) -> Result<String,String> {
+    let cache_dir: String = match config.mode {
+      Mode::Server => config.server_cache_dir.clone(),
+      Mode::Client => config.client_cache_dir.clone(),
+    };
+    match self.as_url() {
+      Some(url) => {
+        let host: String = match url.host() {
+          Some(host) => host.to_string(),
+          None       => String::from("unknown"),
+        };
+        let file_path: String = if url.path().ends_with("/") {
+          format!("{}index.gmi",url.path())
+        } else if url.path().is_empty() {
+          String::from("/index.gmi")
+        } else {
+          url.path().to_string()
+        };
+        let save_path: String = format!("{}/{}{}",cache_dir,host,file_path);
+        let path = Path::new(&save_path);
+        if let Some(parent_dir) = path.parent() {
+          match fs::create_dir_all(parent_dir) {
+            Ok(_)    => {},
+            Err(err) => return Err(format!("Failed to create parent directories {}: {}",save_path,err)),
+          }
+        }
+        match fs::write(&save_path,self.body.clone()) {
+          Ok(())   => Ok(save_path),
+          Err(err) => Err(format!("Save failed to {}: {}",save_path,err)),
+        }
+      },
+      None => Err(format!("Unable to get url from request.")),
     }
   }
 }

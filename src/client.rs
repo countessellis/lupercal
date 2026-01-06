@@ -15,8 +15,7 @@ use ratatui::prelude::*;
 use tui_logger::{TuiLoggerWidget,TuiWidgetState};
 use std::thread;
 use textwrap::wrap;
-use gag::Gag;
-use std::io::ErrorKind;
+use gag::Hold;
 use openssl::ssl::ErrorCode;
 
 use crate::config::*;
@@ -47,7 +46,7 @@ impl Client {
       Ok(store) => {
         log::info!("Key store created successfully.");
         log::info!("Starting listener...");
-        Self::splash();
+        //Self::splash();
         Some(Client { config: config.clone(), keys: store.clone() })
       },
       Err(err)    => {
@@ -58,8 +57,8 @@ impl Client {
   }
 
   pub(crate) fn request(&self,request: &Request) -> Option<Request> {
-    match Url::parse(&request.next) {
-      Ok(url) => {
+    match request.as_url() {
+      Some(url) => {
         log::info!("Making request for: {}",request.next);
         match url.host_str() {
           Some(host) => {
@@ -78,9 +77,13 @@ impl Client {
                             loop {
                               match tunnel.ssl_read(&mut buffer) {
                                 Ok(0) => {
-                                  match Response::from_bytes(&bytes) {
+                                  match Response::from_bytes(&Some(request.clone()),&bytes) {
                                     Ok(response) => {
-                                      return self.display(&request,&response);
+                                      log::debug!("All bytes returned: {}",bytes.len());
+                                      let err = Hold::stderr().unwrap();
+                                      let result = self.display(&request,&response);
+                                      drop(err);
+                                      return result;
                                     },
                                     Err(err) => {
                                       log::error!("Failed to parse response from {}: {}",request.next,err);  
@@ -88,13 +91,18 @@ impl Client {
                                   }
                                 },
                                 Ok(len) => {
+                                  log::debug!("Received {} bytes...",len);
                                   bytes.extend_from_slice(&buffer[..len]);
                                 },
                                 Err(err) => {
                                   if err.code() == ErrorCode::ZERO_RETURN {
-                                    match Response::from_bytes(&bytes) {
+                                    match Response::from_bytes(&Some(request.clone()),&bytes) {
                                       Ok(response) => {
-                                        return self.display(&request,&response);
+                                        log::debug!("All bytes returned: {}",bytes.len());
+                                        //let err = Hold::stderr().unwrap();
+                                        let result = self.display(&request,&response);
+                                        //drop(err);
+                                        return result;
                                       },
                                       Err(err) => {
                                         log::error!("Failed to parse response from {}: {}",request.next,err);  
@@ -137,8 +145,8 @@ impl Client {
           },
         }
       },
-      Err(err) => {
-        log::error!("Failed to parse {} as an url: {}",request.next,err);
+      None => {
+        log::error!("Failed to parse {} as an url",request.next);
       },
     }
     None
@@ -165,8 +173,8 @@ impl Client {
 
   pub(crate) fn display(&self, source: &Request, response: &Response) -> Option<Request> {
     let mut request: Option<Request> = None;
-    match Url::parse(&source.next) {
-      Ok(url) => {
+    match source.as_url() {
+      Some(url) => {
         let payload: Option<(String,String)> = response.text();
         match payload {
           Some((subtype,text)) => {
@@ -184,8 +192,6 @@ impl Client {
             let mut lines: Vec<Line> = Vec::new();
             let mut links: Vec<String> = Vec::new();
             'main: loop {
-              Gag::stderr().unwrap();
-              Gag::stdout().unwrap();
               let block = Block::bordered()
                 .title(Line::from(format!(" {} [{}] ",APP_NAME,source.next)).centered())
                 .title_bottom(Line::from("q to quit, number for link").centered())
@@ -194,7 +200,7 @@ impl Client {
                 .border_style(Style::default().add_modifier(Modifier::BOLD))
                 .padding(Padding::new(1,1,1,1));
               match terminal.draw(|frame| {
-                let chunks = Layout::vertical([Constraint::Min(0),Constraint::Length(6)]).split(frame.size());
+                let chunks = Layout::vertical([Constraint::Min(0),Constraint::Length(26)]).split(frame.area());
                 let main_area = chunks[0];
                 let log_area = chunks[1];
                 let unformatted: Vec<&str> = text.lines().collect();
@@ -310,6 +316,12 @@ impl Client {
                           scroll_pos = max_scroll;
                           scrollbar_state.position(scroll_pos);
                         },
+                        KeyCode::Char('s') => {
+                          match response.save(&self.config) {
+                            Ok(path) => log::info!("Saved to {}",path),
+                            Err(err) => log::error!("Failed to save to file: {}",err),
+                          }
+                        },
                         _ => {},
                       }
                     }
@@ -323,11 +335,22 @@ impl Client {
             }
             ratatui::restore();
           },
-          None => {},
+          None => {
+            match response.datatype() {
+              Some(_) => {
+                log::info!("Received non-text file, saving to cache.");
+                match response.save(&self.config) {
+                  Ok(path) => log::info!("Saved to {}",path),
+                  Err(err) => log::error!("Failed to save to file: {}",err),
+                }
+              },
+              None => {},
+            }
+          },
         }
       },
-      Err(err) => {
-        log::error!("Failed to convert {} to a URL: {}",source.next,err);
+      None => {
+        log::error!("Failed to convert {} to a URL.",source.next);
         return None;
       },
     }
