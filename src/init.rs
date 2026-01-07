@@ -11,10 +11,11 @@ use crate::server::*;
 pub fn run() {
   log::info!("{}",splash());
   log::info!("{}",version());
-  match Mode::mode() {
+  let mode: Mode = Mode::mode();
+  let config: Config = Config::default_config(&mode);
+  match mode {
     Mode::Server=> {
       log::debug!("Running in Server mode.");
-      let config: Config = Config::from_file(&DEFAULT_SERVER_CONFIG.to_string());
       match Server::new(&config) {
         Some(server) => {
           server.listen();
@@ -22,9 +23,14 @@ pub fn run() {
         None => {},
       }
     },
-    Mode::Client => {
+    Mode::Proxy => {
+      log::debug!("Running in Proxy mode.");
+    },
+    Mode::Convert => {
+      log::debug!("Running in Convert mode.");
+    },
+    _ => {
       log::debug!("Running in Client mode.");
-      let config: Config = Config::from_file(&DEFAULT_CLIENT_CONFIG.to_string());
       match Client::new(&config) {
         Some(client) => {
           match Request::from_args(&config) {
@@ -39,6 +45,6 @@ pub fn run() {
         },
         None => {},
       }
-    }
+    },
   }
 }

@@ -8,6 +8,8 @@ use std::fmt;
 pub(crate) enum Mode {
   Server,
   Client,
+  Proxy,
+  Convert,
 }
 
 impl Default for Mode {
@@ -20,8 +22,10 @@ impl FromStr for Mode {
   type Err = &'static str;
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     match s {
-      "server" => Ok(Mode::Server),
-      _        => Ok(Default::default()),
+      "server"  => Ok(Mode::Server),
+      "proxy"   => Ok(Mode::Proxy),
+      "convert" => Ok(Mode::Convert),
+      _         => Ok(Default::default()),
     }
   }
 }
@@ -29,8 +33,10 @@ impl FromStr for Mode {
 impl fmt::Display for Mode {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mode: &str = match self {
-      Mode::Server => "server",
-      Mode::Client => "client",
+      Mode::Server  => "server",
+      Mode::Client  => "client",
+      Mode::Proxy   => "proxy",
+      Mode::Convert => "convert",
     };
     write!(f, "{}",mode)
   }
@@ -43,15 +49,19 @@ impl Mode {
     while let Some(arg) = args.next() {
       match arg.as_str() {
         "--mode" => match args.next() {
-          Some(mode) => match mode.as_str() {
-            "server" => return Mode::Server,
-            "client" => return Mode::Client,
-            _        => {},
+          Some(mode)  => match mode.as_str() {
+            "server"  => return Mode::Server,
+            "client"  => return Mode::Client,
+            "proxy"   => return Mode::Proxy,
+            "convert" => return Mode::Convert,
+            _         => {},
           },
-          None       => {},
+          None        => {},
         },
-        "--server"   => return Mode::Server,
-        "--client"   => return Mode::Client,
+        "--server"    => return Mode::Server,
+        "--client"    => return Mode::Client,
+        "--proxy"     => return Mode::Proxy,
+        "--convert"   => return Mode::Convert,
         _ => {},
       }
     }

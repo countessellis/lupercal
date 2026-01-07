@@ -111,7 +111,8 @@ impl Response {
   pub(crate) fn save(&self,config: &Config) -> Result<String,String> {
     let cache_dir: String = match config.mode {
       Mode::Server => config.server_cache_dir.clone(),
-      Mode::Client => config.client_cache_dir.clone(),
+      Mode::Proxy  => config.proxy_cache_dir.clone(),
+      _            => config.client_cache_dir.clone(),
     };
     match self.as_url() {
       Some(url) => {

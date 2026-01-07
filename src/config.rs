@@ -10,10 +10,10 @@ use crate::util::*;
 #[derive(Debug, Clone)]
 pub struct Config {
   // General:
-  pub(crate) mode:      Mode,
-  // Server related:
+  pub(crate) mode: Mode,
   pub(crate) server_name: String,
   pub(crate) listen_addr: String,
+  // Server related:
   pub(crate) content_dir: String,
   pub(crate) server_cache_dir: String,
   pub(crate) server_store_dir: String,
@@ -21,6 +21,10 @@ pub struct Config {
   pub(crate) client_name: String,
   pub(crate) client_cache_dir: String,
   pub(crate) client_store_dir: String,
+  // Proxy related:
+  pub(crate) proxy_name: String,
+  pub(crate) proxy_cache_dir: String,
+  pub(crate) proxy_store_dir: String,
 }
 
 impl Config {
@@ -57,6 +61,22 @@ impl Config {
         DEFAULT_CLIENT_STORE_DIR.to_string()
       },
     };
+    let proxy_cache_dir: String = match dirs::cache_dir() {
+      Some(cache) => {
+        format!("{}/{}/proxy",cache.display().to_string(),BUILD_NAME)
+      },
+      None => {
+        DEFAULT_PROXY_CACHE_DIR.to_string()
+      },
+    };
+    let proxy_store_dir: String = match dirs::cache_dir() {
+      Some(cache) => {
+        format!("{}/{}/proxy/store/",cache.display().to_string(),BUILD_NAME)
+      },
+      None => {
+        DEFAULT_PROXY_STORE_DIR.to_string()
+      },
+    };
     Config {
       // General:
       mode:             Default::default(),
@@ -70,6 +90,10 @@ impl Config {
       client_name:      DEFAULT_CLIENT_NAME.to_string(),
       client_cache_dir: client_cache_dir,
       client_store_dir: client_store_dir,
+      // Proxy related:
+      proxy_name:      DEFAULT_PROXY_NAME.to_string(),
+      proxy_cache_dir: proxy_cache_dir,
+      proxy_store_dir: proxy_store_dir,
     }
   }
   
@@ -88,6 +112,10 @@ impl Config {
     config.push(format!("client_name: {}",self.client_name));
     config.push(format!("client_cache_dir: {}",self.client_cache_dir));
     config.push(format!("client_store_dir: {}",self.client_store_dir));
+    // Proxy related:
+    config.push(format!("proxy_name: {}",self.proxy_name));
+    config.push(format!("proxy_cache_dir: {}",self.proxy_cache_dir));
+    config.push(format!("proxy_store_dir: {}",self.proxy_store_dir));
     // Build:
     config.push("".to_string());
     match write(&config_file,config.join("\n")) {
@@ -114,6 +142,10 @@ impl Config {
     config.client_name = prompt(format!("Client identifying name: (typically username@hostname or email address, default: {})",config.client_name),config.client_name);
     config.client_cache_dir = prompt(format!("Client cache directory: (default: {})",config.client_cache_dir),config.client_cache_dir);
     config.client_store_dir = prompt(format!("Client store directory: (default: {})",config.client_store_dir),config.client_store_dir);
+    // Proxy related:
+    config.proxy_name = prompt(format!("Proxy identifying name: (typically username@hostname or email address, default: {})",config.proxy_name),config.proxy_name);
+    config.proxy_cache_dir = prompt(format!("Proxy cache directory: (default: {})",config.proxy_cache_dir),config.proxy_cache_dir);
+    config.proxy_store_dir = prompt(format!("Proxy store directory: (default: {})",config.proxy_store_dir),config.proxy_store_dir);
     // Build:
     println!("\n");
     config
@@ -169,6 +201,10 @@ impl Config {
           "client_name" => config.client_name = value.clone(),
           "client_cache_dir" => config.client_cache_dir = value.clone(),
           "client_store_dir" => config.client_store_dir = value.clone(),
+          // Proxy related:
+          "proxy_name" => config.proxy_name = value.clone(),
+          "proxy_cache_dir" => config.proxy_cache_dir = value.clone(),
+          "proxy_store_dir" => config.proxy_store_dir = value.clone(),
           // Ignore everything else:
           _ => {},
         };
@@ -193,6 +229,20 @@ impl Config {
     default_path.clone()
   }
 
+  pub fn default_config(mode: &Mode) -> Config {
+    let config_dir: String = match dirs::config_dir() {
+      Some(config) => config.display().to_string(),
+      None => DEFAULT_CONFIG_DIR.to_string(),
+    };
+    let config_file = match mode {
+      Mode::Server  => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_SERVER_CONFIG),
+      Mode::Client  => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_CLIENT_CONFIG),
+      Mode::Proxy   => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_PROXY_CONFIG),
+      Mode::Convert => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_CONVERT_CONFIG),
+    };
+    Config::from_file(&config_file)
+  }
+
   pub fn from_args(config: &Config) -> Config {
     let mut args: Args = args();
     let ran_as: String = args.next().unwrap_or(BUILD_NAME.to_string());
@@ -213,6 +263,8 @@ impl Config {
         },
         "--server"   => config.mode = Mode::Server,
         "--client"   => config.mode = Mode::Client,
+        "--proxy"    => config.mode = Mode::Proxy,
+        "--convert"  => config.mode = Mode::Convert,
         // Process server related options:
         "--server_name" => {
           match args.next() {
@@ -263,6 +315,26 @@ impl Config {
             None => {},
           }
         },
+        // Process Proxy related options:
+        "--proxy_name" => {
+          match args.next() {
+            Some(value) => config.proxy_name = value,
+            None => {},
+          }
+        },
+        "--proxy_cache_dir" => {
+          match args.next() {
+            Some(value) => config.proxy_cache_dir = value,
+            None => {},
+          }
+        },
+        "--proxy_store_dir" => {
+          match args.next() {
+            Some(value) => config.proxy_store_dir = value,
+            None => {},
+          }
+        },
+        
         // Error on everything else:
         option => {
           if option.starts_with("--") {

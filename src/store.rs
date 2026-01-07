@@ -30,8 +30,9 @@ pub(crate) struct Store {
 impl Store {
   pub(crate) fn new(config: &Config) -> Result<Store,String> {
     let store_dir: String = match config.mode {
-      Mode::Server => config.server_store_dir.clone(),
-      Mode::Client => config.client_store_dir.clone(),
+      Mode::Server  => config.server_store_dir.clone(),
+      Mode::Proxy   => config.proxy_store_dir.clone(),
+      _             => config.client_store_dir.clone(),
     };
     log::info!("Initializing key store...");
     match fs::create_dir_all(&store_dir) {
@@ -84,12 +85,14 @@ impl fmt::Debug for Keys {
 impl Keys {
   pub(crate) fn new(config: &Config) -> Result<Keys,String> {
     let name: String = match config.mode {
-      Mode::Server => config.server_name.clone(),
-      Mode::Client => config.client_name.clone(),
+      Mode::Server  => config.server_name.clone(),
+      Mode::Proxy   => config.proxy_name.clone(),
+      _             => config.client_name.clone(),
     };
     let store_dir: String = match config.mode {
-      Mode::Server => config.server_store_dir.clone(),
-      Mode::Client => config.client_store_dir.clone(),
+      Mode::Server  => config.server_store_dir.clone(),
+      Mode::Proxy   => config.proxy_store_dir.clone(),
+      _             => config.client_store_dir.clone(),
     };
     let pkey_locked: String   = format!("{}{}.locked.pem",store_dir,name);
     let pkey_unlocked: String = format!("{}{}.unlocked.pem",store_dir,name);
@@ -196,12 +199,14 @@ impl Keys {
 
   fn gen_key(config: &Config) -> Option<Rsa<Private>> {
     let name: String = match config.mode {
-      Mode::Server => config.server_name.clone(),
-      Mode::Client => config.client_name.clone(),
+      Mode::Server  => config.server_name.clone(),
+      Mode::Proxy   => config.proxy_name.clone(),
+      _             => config.client_name.clone(),
     };
     let store_dir: String = match config.mode {
-      Mode::Server => config.server_store_dir.clone(),
-      Mode::Client => config.client_store_dir.clone(),
+      Mode::Server  => config.server_store_dir.clone(),
+      Mode::Proxy   => config.proxy_store_dir.clone(),
+      _             => config.client_store_dir.clone(),
     };
     match Rsa::generate(DEFAULT_KEY_SIZE) {
       Ok(keypair) => {
@@ -238,12 +243,14 @@ impl Keys {
 
   fn create_cert(config: &Config, keypair: &Rsa<Private>) -> Result<X509,ErrorStack> {
     let name: String = match config.mode {
-      Mode::Server => config.server_name.clone(),
-      Mode::Client => config.client_name.clone(),
+      Mode::Server  => config.server_name.clone(),
+      Mode::Proxy   => config.proxy_name.clone(),
+      _             => config.client_name.clone(),
     };
     let store_dir: String = match config.mode {
-      Mode::Server => config.server_store_dir.clone(),
-      Mode::Client => config.client_store_dir.clone(),
+      Mode::Server  => config.server_store_dir.clone(),
+      Mode::Proxy   => config.proxy_store_dir.clone(),
+      _             => config.client_store_dir.clone(),
     };
     let cert_file: String = format!("{}{}.cert.pem",store_dir,name);
     let pkey = PKey::from_rsa(keypair.clone())?;
@@ -279,12 +286,14 @@ impl Keys {
   fn unlock(&self) {
     log::info!("Unlocking private key.");
     let name: String = match self.config.mode {
-      Mode::Server => self.config.server_name.clone(),
-      Mode::Client => self.config.client_name.clone(),
+      Mode::Server  => self.config.server_name.clone(),
+      Mode::Proxy   => self.config.proxy_name.clone(),
+      _             => self.config.client_name.clone(),
     };
     let store_dir: String = match self.config.mode {
-      Mode::Server => self.config.server_store_dir.clone(),
-      Mode::Client => self.config.client_store_dir.clone(),
+      Mode::Server  => self.config.server_store_dir.clone(),
+      Mode::Proxy   => self.config.proxy_store_dir.clone(),
+      _             => self.config.client_store_dir.clone(),
     };
     let pkey_unlocked: String   = format!("{}{}.unlocked.pem",store_dir,name);
     match self.keypair.private_key_to_pem() {
@@ -305,12 +314,14 @@ impl Keys {
   fn lock(&self) {
     log::info!("Locking private key.");
     let name: String = match self.config.mode {
-      Mode::Server => self.config.server_name.clone(),
-      Mode::Client => self.config.client_name.clone(),
+      Mode::Server  => self.config.server_name.clone(),
+      Mode::Proxy   => self.config.proxy_name.clone(),
+      _             => self.config.client_name.clone(),
     };
     let store_dir: String = match self.config.mode {
-      Mode::Server => self.config.server_store_dir.clone(),
-      Mode::Client => self.config.client_store_dir.clone(),
+      Mode::Server  => self.config.server_store_dir.clone(),
+      Mode::Proxy   => self.config.proxy_store_dir.clone(),
+      _             => self.config.client_store_dir.clone(),
     };
     let pkey_unlocked: String   = format!("{}{}.unlocked.pem",store_dir,name);
     let path: &Path = Path::new(&pkey_unlocked);
