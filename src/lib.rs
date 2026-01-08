@@ -1,5 +1,6 @@
 pub mod client;
 pub mod config;
+pub mod convert;
 pub mod defaults;
 pub mod init;
 pub mod logger;

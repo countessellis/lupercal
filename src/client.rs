@@ -188,7 +188,7 @@ impl Client {
             let mut link_count: usize = 0;
             let mut page_len: usize = 0;
             let mut scrollbar_state: ScrollbarState  = Default::default();
-            let mut logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
+            let logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
             let mut lines: Vec<Line> = Vec::new();
             let mut links: Vec<String> = Vec::new();
             'main: loop {

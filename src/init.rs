@@ -1,6 +1,6 @@
 use crate::client::*;
+use crate::convert::*;
 use crate::config::*;
-use crate::defaults::*;
 use crate::mode::*;
 use crate::request::*;
 use crate::splash::*;
@@ -28,6 +28,8 @@ pub fn run() {
     },
     Mode::Convert => {
       log::debug!("Running in Convert mode.");
+      let convert: Convert = Convert::new(&config);
+      convert.convert();
     },
     _ => {
       log::debug!("Running in Client mode.");

@@ -8,7 +8,7 @@ use crate::mode::*;
 use crate::util::*;
 
 #[derive(Debug, Clone)]
-pub struct Config {
+pub(crate) struct Config {
   // General:
   pub(crate) mode: Mode,
   pub(crate) server_name: String,
@@ -25,6 +25,9 @@ pub struct Config {
   pub(crate) proxy_name: String,
   pub(crate) proxy_cache_dir: String,
   pub(crate) proxy_store_dir: String,
+  // Convert related:
+  pub(crate) convert_in: String,
+  pub(crate) convert_out: String,
 }
 
 impl Config {
@@ -94,6 +97,9 @@ impl Config {
       proxy_name:      DEFAULT_PROXY_NAME.to_string(),
       proxy_cache_dir: proxy_cache_dir,
       proxy_store_dir: proxy_store_dir,
+      // Convert related:
+      convert_in: String::new(),
+      convert_out: String::new(),
     }
   }
   
@@ -205,6 +211,9 @@ impl Config {
           "proxy_name" => config.proxy_name = value.clone(),
           "proxy_cache_dir" => config.proxy_cache_dir = value.clone(),
           "proxy_store_dir" => config.proxy_store_dir = value.clone(),
+          // Convert related:
+          "convert_in" => config.convert_in = value.clone(),
+          "convert_out" => config.convert_out = value.clone(),
           // Ignore everything else:
           _ => {},
         };
@@ -331,6 +340,19 @@ impl Config {
         "--proxy_store_dir" => {
           match args.next() {
             Some(value) => config.proxy_store_dir = value,
+            None => {},
+          }
+        },
+        // Process Convert related options:
+        "--convert-in" | "--convert_in" => {
+          match args.next() {
+            Some(value) => config.convert_in = value,
+            None => {},
+          }
+        },
+        "--convert-out" | "--convert_out" => {
+          match args.next() {
+            Some(value) => config.convert_out = value,
             None => {},
           }
         },
