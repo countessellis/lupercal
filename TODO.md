@@ -4,7 +4,6 @@
 * Horizontal scroll to support raw.
 * Caching and checking of certs.
 * Add the proxy (this won't take much since it's essentially the client for origin pull and the server for front end).
-* Convert mode that takes a gemtext doc and converts it to a very simple static html doc with consistent format, no javascript, and pointing to /default.css for style. 
 
 ## Possible Future:
 
