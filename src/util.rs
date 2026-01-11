@@ -1,6 +1,9 @@
 use std::io::{Write,stdout,stdin};
 use std::fs;
 use url::Url;
+use std::path::Path;
+
+use crate::defaults::*;
 
 pub(crate) fn prompt(prompt: String, default: String) -> String {
   print!("{} ",prompt);
@@ -52,6 +55,23 @@ pub(crate) fn build_abs_url(source: &Url, link: &String) -> String {
   } else {
     link
   };
-  log::error!("{}://{}/{}",scheme,host,path);
   format!("{}://{}/{}",scheme,host,path)
+}
+
+pub(crate) fn is_image(file: &String) -> Option<String> {
+  let path = Path::new(file);
+  match path.extension() {
+    Some(extension) => {
+      match extension.to_str() {
+        Some(extension) => {
+          match IMAGE_EXTENSIONS.contains(&extension.to_string().as_str()) {
+            true  => Some(file.clone()),
+            false => None,
+          }
+        },
+        None => None,
+      }
+    },
+    None => None,
+  }
 }

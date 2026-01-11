@@ -1,3 +1,6 @@
+use std::io;
+use is_terminal::IsTerminal;
+
 use crate::client::*;
 use crate::convert::*;
 use crate::config::*;
@@ -9,7 +12,11 @@ use crate::server::*;
 ///////////// Run
 
 pub fn run() {
-  log::info!("{}",splash());
+  if io::stdout().is_terminal() {
+    println!("{}",splash());
+  } else {
+    log::info!("{}",raw_splash());
+  }
   log::info!("{}",version());
   let mode: Mode = Mode::mode();
   let config: Config = Config::default_config(&mode);
@@ -29,7 +36,7 @@ pub fn run() {
     Mode::Convert => {
       log::debug!("Running in Convert mode.");
       let convert: Convert = Convert::new(&config);
-      convert.convert();
+      convert.run();
     },
     _ => {
       log::debug!("Running in Client mode.");

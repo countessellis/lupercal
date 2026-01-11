@@ -1,6 +1,9 @@
 use log::{LevelFilter,Level};
 use std::str::FromStr;
 use std::io::Write;
+use tracing_log::LogTracer;
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Registry};
+use tracing_subscriber::Layer;
 
 use crate::defaults::*;
 
@@ -14,36 +17,35 @@ pub fn init() {
     },
     Err(_)    => DEFAULT_LOG_LEVEL,
   };
-  let drain = tui_logger::Drain::new();
-  env_logger::Builder::from_default_env()
-    .filter_level(loglevel)
-    .format(move |buf, record| {
-      let mut metadata: Vec<String> = Vec::new();
-      match DEFAULT_LOG_FORMAT_TIMESTAMP {
-        Some(format) => metadata.push(buf.timestamp_millis().to_string()),
-        None => {},
-      }
-      match DEFAULT_LOG_FORMAT_LEVEL {
-        true => {
-          let level_style = buf.default_level_style(record.level());
-          let level = record.level();
-          let reset = level_style.render_reset();
-          metadata.push(format!("{level_style}{level:<5}{reset}"));
-        },
-        false => {},
-      }
-      match DEFAULT_LOG_FORMAT_TARGET {
-        true => metadata.push(record.target().to_string()),
-        false => {},
-      }
-      if metadata.len() > 0 {
-        writeln!(buf,"[{}] {}",metadata.join(" "),record.args())?;
-      } else {
-        writeln!(buf,"{}",record.args())?;
-      }
-      Ok(drain.log(record))
-    })
-    .target(DEFAULT_LOG_TARGET)
-    .init();
+  let loglevel = tracing_subscriber::filter::LevelFilter::from_str(&loglevel.to_string()).unwrap_or(tracing_subscriber::filter::LevelFilter::INFO);
+  let tui_layer = tui_logger::TuiTracingSubscriberLayer;
+  let registry = Registry::default().with(tui_layer);
+  #[cfg(debug_assertions)]
+  {
+    let stderr_layer = fmt::layer().with_writer(std::io::stderr).with_filter(loglevel);
+    registry.with(stderr_layer).init();
+  }
+  #[cfg(not(debug_assertions))]
+  {
+    if std::env::var("JOURNAL_STREAM").is_ok() {
+        match tracing_journald::layer() {
+          Ok(journal_layer) => {
+            registry.with(journal_layer).init();
+          },
+          Err(_) => {
+            let file_appender = tracing_appender::rolling::daily("./logs", "app.log");
+            let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+            let _file_guard = Some(guard);
+            let file_layer = fmt::layer().with_writer(non_blocking).with_filter(loglevel);
+            registry.with(file_layer).init();
+          },
+        }
+    } else {
+      let file_appender = tracing_appender::rolling::daily("./logs", "app.log");
+      let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+      _file_guard = Some(guard);
+      let file_layer = fmt::layer().with_writer(non_blocking).with_filter(loglevel);
+      registry.with(file_layer).init();
+    }
+  }
 }
-

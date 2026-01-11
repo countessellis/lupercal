@@ -33,3 +33,17 @@ pub(crate) const DEFAULT_CLIENT_CONFIG: &str    = "client.cfg";
 pub(crate) const DEFAULT_PROXY_CONFIG: &str     = "proxy.cfg";
 pub(crate) const DEFAULT_CONVERT_CONFIG: &str   = "convert.cfg";
 
+pub(crate) const IMAGE_EXTENSIONS: &[&str] = &[
+    "jpg", "jpeg", "jfif", "pjpeg", "pjp", "jpe", "jif", // JPEG
+    "png",                                               // PNG
+    "gif",                                               // GIF
+    "svg",                                               // SVG
+    "webp",                                              // WebP
+    "avif",                                              // AVIF
+    "apng",                                              // APNG
+    "ico", "cur",                                        // Icon
+    "bmp", "dib",                                        // Bitmap
+    "tif", "tiff",                                       // TIFF
+    "heic", "heif",                                      // HEIF
+    "jxl",                                               // JPEG XL
+];
