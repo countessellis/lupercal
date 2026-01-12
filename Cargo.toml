@@ -13,6 +13,22 @@ edition = "2024"
 name = "lupercal"
 path = "src/main.rs"
 
+[[bin]]
+name = "lupercal-server"
+path = "src/main.rs"
+
+[[bin]]
+name = "lupercal-client"
+path = "src/main.rs"
+
+[[bin]]
+name = "lupercal-proxy"
+path = "src/main.rs"
+
+[[bin]]
+name = "lupercal-convert"
+path = "src/main.rs"
+
 [lib]
 name = "lupercal"
 path = "src/lib.rs"

@@ -20,6 +20,7 @@ pub fn run() {
   log::info!("{}",version());
   let mode: Mode = Mode::mode();
   let config: Config = Config::default_config(&mode);
+  log::debug!("Config: {:?}",config);
   match mode {
     Mode::Server=> {
       log::debug!("Running in Server mode.");

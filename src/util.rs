@@ -2,6 +2,7 @@ use std::io::{Write,stdout,stdin};
 use std::fs;
 use url::Url;
 use std::path::Path;
+use std::env;
 
 use crate::defaults::*;
 
@@ -75,3 +76,21 @@ pub(crate) fn is_image(file: &String) -> Option<String> {
     None => None,
   }
 }
+
+pub(crate) fn bin_name() -> String {
+  match env::current_exe() {
+    Ok(path) => {
+       let path = path.as_path();
+       match path.file_name() {
+         Some(file_name) => match file_name.to_str() {
+           Some(file_name) => return file_name.to_string(),
+           None => {},
+         },
+         None => {},
+       }
+    },
+    Err(_) => {},
+  }
+  BUILD_NAME.to_string()
+}
+

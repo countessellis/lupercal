@@ -2,6 +2,9 @@ use std::env::{args,Args};
 use std::str::FromStr;
 use std::fmt;
 
+use crate::defaults::*;
+use crate::util;
+
 ///////////// Mode
 
 #[derive(Debug, Clone)]
@@ -14,7 +17,15 @@ pub(crate) enum Mode {
 
 impl Default for Mode {
   fn default() -> Self {
-    Mode::Client
+    let bin_name: String = util::bin_name();
+    let bin_name: &str = if let Some(index) = bin_name.find(".") { &bin_name[..index] } else { &bin_name };
+    let mode: &str = if let Some(index) = bin_name.find("-") { &bin_name[index+1..] } else { "client" };
+    match mode {
+      "server"  => Mode::Server,
+      "proxy"   => Mode::Proxy,
+      "convert" => Mode::Convert,
+      _         => Mode::Client,
+    }
   }
 }
 

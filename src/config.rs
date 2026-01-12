@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use crate::defaults::*;
 use crate::mode::*;
-use crate::util::*;
+use crate::util;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Config {
@@ -104,7 +104,7 @@ impl Config {
   }
   
   pub fn write(&self,config_file: &String) -> Result<String,String> {
-    let config_file: String = build_path(&config_file,&"config".to_string());
+    let config_file: String = util::build_path(&config_file,&"config".to_string());
     let mut config: Vec<String> = Vec::new();
     // General:
     config.push(format!("mode: {}",self.mode));
@@ -134,24 +134,24 @@ impl Config {
     let mut config = Config::defaults();
     println!("\n");
     // General:
-    config.mode = match Mode::from_str(prompt(format!("Mode: (server or client, default: {})",config.mode),config.mode.to_string()).as_str()) {
+    config.mode = match Mode::from_str(util::prompt(format!("Mode: (server/proxy/client/convert, default: {})",config.mode),config.mode.to_string()).as_str()) {
       Ok(mode) => mode,
       Err(_)   => Default::default(),
     };
     // Server related:
-    config.server_name = prompt(format!("Server fully qualified domain name: (default: {})",config.server_name),config.server_name);
-    config.listen_addr = prompt(format!("Server listening address: (default: {})",config.listen_addr),config.listen_addr);
-    config.content_dir = prompt(format!("Content directory: (default: {})",config.content_dir),config.content_dir);
-    config.server_cache_dir = prompt(format!("Server cache directory: (default: {})",config.server_cache_dir),config.server_cache_dir);
-    config.server_store_dir = prompt(format!("Server store directory: (default: {})",config.server_store_dir),config.server_store_dir);
+    config.server_name = util::prompt(format!("Server fully qualified domain name: (default: {})",config.server_name),config.server_name);
+    config.listen_addr = util::prompt(format!("Server listening address: (default: {})",config.listen_addr),config.listen_addr);
+    config.content_dir = util::prompt(format!("Content directory: (default: {})",config.content_dir),config.content_dir);
+    config.server_cache_dir = util::prompt(format!("Server cache directory: (default: {})",config.server_cache_dir),config.server_cache_dir);
+    config.server_store_dir = util::prompt(format!("Server store directory: (default: {})",config.server_store_dir),config.server_store_dir);
     // Client related:
-    config.client_name = prompt(format!("Client identifying name: (typically username@hostname or email address, default: {})",config.client_name),config.client_name);
-    config.client_cache_dir = prompt(format!("Client cache directory: (default: {})",config.client_cache_dir),config.client_cache_dir);
-    config.client_store_dir = prompt(format!("Client store directory: (default: {})",config.client_store_dir),config.client_store_dir);
+    config.client_name = util::prompt(format!("Client identifying name: (typically username@hostname or email address, default: {})",config.client_name),config.client_name);
+    config.client_cache_dir = util::prompt(format!("Client cache directory: (default: {})",config.client_cache_dir),config.client_cache_dir);
+    config.client_store_dir = util::prompt(format!("Client store directory: (default: {})",config.client_store_dir),config.client_store_dir);
     // Proxy related:
-    config.proxy_name = prompt(format!("Proxy identifying name: (typically username@hostname or email address, default: {})",config.proxy_name),config.proxy_name);
-    config.proxy_cache_dir = prompt(format!("Proxy cache directory: (default: {})",config.proxy_cache_dir),config.proxy_cache_dir);
-    config.proxy_store_dir = prompt(format!("Proxy store directory: (default: {})",config.proxy_store_dir),config.proxy_store_dir);
+    config.proxy_name = util::prompt(format!("Proxy identifying name: (typically username@hostname or email address, default: {})",config.proxy_name),config.proxy_name);
+    config.proxy_cache_dir = util::prompt(format!("Proxy cache directory: (default: {})",config.proxy_cache_dir),config.proxy_cache_dir);
+    config.proxy_store_dir = util::prompt(format!("Proxy store directory: (default: {})",config.proxy_store_dir),config.proxy_store_dir);
     // Build:
     println!("\n");
     config
@@ -166,7 +166,7 @@ impl Config {
         Ok(false) => {
           println!("Config file {} does not exist.",config_file);
           let config: Config = Config::new();
-          let to_file: bool = prompt(format!("Write config to new file at {}? (true/false, default false)",config_file),"false".to_string()).parse().unwrap_or(false);
+          let to_file: bool = util::prompt(format!("Write config to new file at {}? (true/false, default false)",config_file),"false".to_string()).parse().unwrap_or(false);
           if to_file {
             match config.write(&config_file) {
               Ok(message) => println!("{}",message),
@@ -239,22 +239,22 @@ impl Config {
   }
 
   pub fn default_config(mode: &Mode) -> Config {
+    log::debug!("Finding default config directory for {}.",mode);
     let config_dir: String = match dirs::config_dir() {
       Some(config) => config.display().to_string(),
       None => DEFAULT_CONFIG_DIR.to_string(),
     };
     let config_file = match mode {
       Mode::Server  => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_SERVER_CONFIG),
-      Mode::Client  => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_CLIENT_CONFIG),
       Mode::Proxy   => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_PROXY_CONFIG),
       Mode::Convert => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_CONVERT_CONFIG),
+      _             => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_CLIENT_CONFIG),
     };
     Config::from_file(&config_file)
   }
 
   pub fn from_args(config: &Config) -> Config {
     let mut args: Args = args();
-    let ran_as: String = args.next().unwrap_or(BUILD_NAME.to_string());
     let mut config: Config = config.clone();
     while let Some(arg) = args.next() {
       match arg.as_str() {
@@ -344,13 +344,13 @@ impl Config {
           }
         },
         // Process Convert related options:
-        "--convert-in" | "--convert_in" => {
+        "--convert-in" | "--convert_in" | "--in" => {
           match args.next() {
             Some(value) => config.convert_in = value,
             None => {},
           }
         },
-        "--convert-out" | "--convert_out" => {
+        "--convert-out" | "--convert_out" | "--out" => {
           match args.next() {
             Some(value) => config.convert_out = value,
             None => {},
@@ -360,7 +360,7 @@ impl Config {
         // Error on everything else:
         option => {
           if option.starts_with("--") {
-            eprintln!("{}: unrecognized option -- '{}'",ran_as,option);
+            eprintln!("{}: unrecognized option -- '{}'",util::bin_name(),option);
           }
         },
       }
