@@ -183,11 +183,15 @@ impl Client {
               Err(_) => return None,
             }
             let mut terminal = ratatui::init();
-            let mut scroll_pos: usize = 0;
+            let mut vert_scroll_pos: usize = 0;
+            let mut hori_scroll_pos: usize = 0;
             let mut line_count: usize = 0;
             let mut link_count: usize = 0;
             let mut page_len: usize = 0;
-            let mut scrollbar_state: ScrollbarState  = Default::default();
+            let mut max_width: usize = 0;
+            let mut max_hori_scroll: usize = 0;
+            let mut vert_scroll_state: ScrollbarState  = Default::default();
+            let mut hori_scroll_state: ScrollbarState  = Default::default();
             let logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
             let mut lines: Vec<Line> = Vec::new();
             let mut links: Vec<String> = Vec::new();
@@ -207,14 +211,22 @@ impl Client {
                 (lines,links) = Self::format(subtype.clone(),unformatted,(main_area.width-4) as usize);
                 line_count = lines.len();
                 link_count = links.len();
-                let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((scroll_pos as u16,0)).block(block);
-                scrollbar_state.content_length(line_count).position(scroll_pos);
+                max_width = lines.iter().map(|line| line.width()).max().unwrap_or(0);
+                max_hori_scroll = max_width-(main_area.width as usize)+10;
+                let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((vert_scroll_pos as u16,hori_scroll_pos as u16)).block(block);
+                vert_scroll_state.content_length(line_count).position(vert_scroll_pos);
+                hori_scroll_state.content_length(max_width).position(hori_scroll_pos);
                 page_len = main_area.height as usize - 1;
                 frame.render_widget(&paragraph,main_area);
                 frame.render_stateful_widget(
                   Scrollbar::new(ScrollbarOrientation::VerticalRight),
                   main_area.inner(Margin { vertical: 1, horizontal: 0 }),
-                  &mut scrollbar_state,
+                  &mut vert_scroll_state,
+                );
+                frame.render_stateful_widget(
+                  Scrollbar::new(ScrollbarOrientation::HorizontalBottom),
+                  main_area.inner(Margin { vertical: 0, horizontal: 1 }),
+                  &mut vert_scroll_state,
                 );
                 let log_widget = TuiLoggerWidget::default()
                   .block(Block::bordered().title("Log"))
@@ -232,7 +244,7 @@ impl Client {
                   break;
                 },
               }
-              let max_scroll: usize = if line_count+2 < page_len { 0 } else { line_count+2-page_len };
+              let max_vert_scroll: usize = if line_count+2 < page_len { 0 } else { line_count+2-page_len };
               tui_logger::move_events();
               match event::poll(Duration::from_millis(250)) {
                 Ok(b) => if b {
@@ -293,28 +305,36 @@ impl Client {
                           break
                         },
                         KeyCode::Enter | KeyCode::Down | KeyCode::Char('j') => {
-                          scroll_pos = scroll_pos.saturating_add(1).min(max_scroll);
-                          scrollbar_state.position(scroll_pos);
+                          vert_scroll_pos = vert_scroll_pos.saturating_add(1).min(max_vert_scroll);
+                          vert_scroll_state.position(vert_scroll_pos);
                         },
                         KeyCode::Up | KeyCode::Char('k') => {
-                          scroll_pos = scroll_pos.saturating_sub(1);
-                          scrollbar_state.position(scroll_pos);
+                          vert_scroll_pos = vert_scroll_pos.saturating_sub(1);
+                          vert_scroll_state.position(vert_scroll_pos);
                         },
                         KeyCode::Char(' ') | KeyCode::PageDown | KeyCode::Char('v') => {
-                          scroll_pos = scroll_pos.saturating_add(page_len).min(max_scroll);
-                          scrollbar_state.position(scroll_pos);
+                          vert_scroll_pos = vert_scroll_pos.saturating_add(page_len).min(max_vert_scroll);
+                          vert_scroll_state.position(vert_scroll_pos);
                         },
                         KeyCode::PageUp | KeyCode::Char('b') => {
-                          scroll_pos = scroll_pos.saturating_sub(page_len);
-                          scrollbar_state.position(scroll_pos);
+                          vert_scroll_pos = vert_scroll_pos.saturating_sub(page_len);
+                          vert_scroll_state.position(vert_scroll_pos);
                         },
                         KeyCode::Home | KeyCode::Char('g') => {
-                          scroll_pos = 0;
-                          scrollbar_state.position(scroll_pos);
+                          vert_scroll_pos = 0;
+                          vert_scroll_state.position(vert_scroll_pos);
                         },
                         KeyCode::End | KeyCode::Char('G') => {
-                          scroll_pos = max_scroll;
-                          scrollbar_state.position(scroll_pos);
+                          vert_scroll_pos = max_vert_scroll;
+                          vert_scroll_state.position(vert_scroll_pos);
+                        },
+                        KeyCode::Right => {
+                          hori_scroll_pos = hori_scroll_pos.saturating_add(1).min(max_hori_scroll);
+                          hori_scroll_state.position(hori_scroll_pos);
+                        },
+                        KeyCode::Left => {
+                          hori_scroll_pos = hori_scroll_pos.saturating_sub(1);
+                          hori_scroll_state.position(hori_scroll_pos);
                         },
                         KeyCode::Char('s') => {
                           match response.save(&self.config) {
@@ -367,8 +387,9 @@ impl Client {
           if raw {
             if line.starts_with("```") {
               raw ^= true;
+            } else {
+              formatted.push(Line::raw(line));
             }
-            formatted.push(Line::raw(line));
           } else {
             match line {
               line if line.starts_with("###") => {

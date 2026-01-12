@@ -1,7 +1,6 @@
 # TODO
 
 * Redesign so doesn't exit on save of non-text link, and for display to be persistent instead of constant in and out, with thread and channel.
-* Horizontal scroll to support raw.
 * Caching and checking of certs.
 * Add the proxy (this won't take much since it's essentially the client for origin pull and the server for front end).
 

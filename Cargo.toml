@@ -8,6 +8,7 @@ homepage = "https://github.com/countessellis/lupercal"
 readme = "README.md"
 version = "0.1.0"
 edition = "2024"
+default-run = "lupercal"
 
 [[bin]]
 name = "lupercal"
