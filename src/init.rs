@@ -45,10 +45,7 @@ pub fn run() {
         Some(client) => {
           match Request::from_args(&config) {
             Some(request) => {
-              let mut request: Option<Request> = client.request(&request);
-              while let Some(next) = request {
-                request = client.request(&next);
-              }
+              client.display(&request);
             },
             None          => log::error!("No request provided."),
           }
