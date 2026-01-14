@@ -167,31 +167,32 @@ impl Client {
 
   pub(crate) fn display(&self, response: &Response) -> Option<Request> {
     let mut request: Option<Request> = None;
-    match response.request {
-      Some(ref source) => {
-        match source.as_url() {
-          Some(url) => {
-            let payload: Option<(String,String)> = response.text();
-            match payload {
-              Some((subtype,text)) => {
-                match terminal::enable_raw_mode() {
-                  Ok(()) => {},
-                  Err(_) => return None,
-                }
-                let mut terminal = ratatui::init();
-                let mut vert_scroll_pos: usize = 0;
-                let mut hori_scroll_pos: usize = 0;
-                let mut line_count: usize = 0;
-                let mut link_count: usize = 0;
-                let mut page_len: usize = 0;
-                let mut max_width: usize = 0;
-                let mut max_hori_scroll: usize = 0;
-                let mut vert_scroll_state: ScrollbarState  = Default::default();
-                let mut hori_scroll_state: ScrollbarState  = Default::default();
-                let logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
-                let mut lines: Vec<Line> = Vec::new();
-                let mut links: Vec<String> = Vec::new();
-                'main: loop {
+    let mut response: Response = response.clone();
+    let mut terminal = ratatui::init();
+    let mut vert_scroll_pos: usize = 0;
+    let mut hori_scroll_pos: usize = 0;
+    let mut line_count: usize = 0;
+    let mut link_count: usize = 0;
+    let mut page_len: usize = 0;
+    let mut max_width: usize = 0;
+    let mut max_hori_scroll: usize = 0;
+    let mut vert_scroll_state: ScrollbarState  = Default::default();
+    let mut hori_scroll_state: ScrollbarState  = Default::default();
+    let logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
+    let mut lines: Vec<Line> = Vec::new();
+    let mut links: Vec<String> = Vec::new();
+    'main: loop {
+      match response.request {
+        Some(ref source) => {
+          match source.as_url() {
+            Some(url) => {
+              let payload: Option<(String,String)> = response.text();
+              match payload {
+                Some((subtype,text)) => {
+                  match terminal::enable_raw_mode() {
+                    Ok(()) => {},
+                    Err(_) => return None,
+                  }
                   let block = Block::bordered()
                     .title(Line::from(format!(" {} [{}] ",APP_NAME,source.next)).centered())
                     .title_bottom(Line::from("q to quit, number for link").centered())
@@ -203,8 +204,7 @@ impl Client {
                     let chunks = Layout::vertical([Constraint::Min(0),Constraint::Length(26)]).split(frame.area());
                     let main_area = chunks[0];
                     let log_area = chunks[1];
-                    let unformatted: Vec<&str> = text.lines().collect();
-                    (lines,links) = Self::format(subtype.clone(),unformatted,(main_area.width-4) as usize);
+                    (lines,links) = Self::format(subtype.clone(),text.clone(),(main_area.width-4) as usize);
                     line_count = lines.len();
                     link_count = links.len();
                     max_width = lines.iter().map(|line| line.width()).max().unwrap_or(0);
@@ -348,39 +348,40 @@ impl Client {
                       return None;
                     },
                   }
-                }
-                ratatui::restore();
-              },
-              None => {
-                match response.datatype() {
-                  Some(_) => {
+                },
+                None => {
+                  match response.datatype() {
+                    Some(_) => {
                     log::info!("Received non-text file, saving to cache.");
-                    match response.save(&self.config) {
-                      Ok(path) => log::info!("Saved to {}",path),
-                      Err(err) => log::error!("Failed to save to file: {}",err),
-                    }
-                  },
-                  None => {},
-                }
-              },
-            }
-          },
-          None => {
-            log::error!("Failed to convert {} to a URL.",source.next);
-            return None;
-          },
-        }
-      },
-      None => return None,
+                        match response.save(&self.config) {
+                        Ok(path) => log::info!("Saved to {}",path),
+                        Err(err) => log::error!("Failed to save to file: {}",err),
+                      }
+                    },
+                    None => {},
+                  }
+                },
+              }
+            },
+            None => {
+              log::error!("Failed to convert {} to a URL.",source.next);
+              return None;
+            },
+          }
+        },
+        None => return None,
+      }
     }
+    ratatui::restore();
     request
   }
 
-  fn format(subtype: String, lines: Vec<&str>, width: usize) -> (Vec<Line>,Vec<String>) {
+  fn format(subtype: String, text: String, width: usize) -> (Vec<Line<'static>>,Vec<String>) {
+    let unformatted: Vec<String> = text.lines().map(|line| line.to_string()).collect();
     let mut formatted: Vec<Line> = Vec::new();
     let mut links: Vec<String> = Vec::new();
     let mut raw: bool = false;
-    for line in lines {
+    for line in unformatted {
       match subtype.as_str() {
         "gemini" | "gmi" => {
           if raw {
@@ -392,35 +393,35 @@ impl Client {
           } else {
             match line {
               line if line.starts_with("###") => {
-                let line: &str = line.strip_prefix("###").unwrap_or(line).trim_start();
-                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                let line: String = line.strip_prefix("###").unwrap_or(&line).trim_start().to_string();
+                let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().italic()));
                 }
               },
                 line if line.starts_with("##") => {
-                let line: &str = line.strip_prefix("##").unwrap_or(line).trim_start();
-                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                let line: String = line.strip_prefix("##").unwrap_or(&line).trim_start().to_string();
+                let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().underlined()));
                 }
               },
               line if line.starts_with("#") => {
-                let line: &str = line.strip_prefix("#").unwrap_or(line).trim_start();
-                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                let line: String = line.strip_prefix("#").unwrap_or(&line).trim_start().to_string();
+                let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().bold()));
                 }
               },
               line if line.starts_with(">") => {
-                let line: &str = line.strip_prefix(">").unwrap_or(line).trim_start();
-                let lines: Vec<String> = wrap(line,width-2).iter().map(|s| format!("  {}",s)).collect();
+                let line: String = line.strip_prefix(">").unwrap_or(&line).trim_start().to_string();
+                let lines: Vec<String> = wrap(&line,width-2).iter().map(|s| format!("  {}",s)).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().italic().dim()));
                 }
               },
               line if line.starts_with("=>") => {
-                let line: &str = line.strip_prefix("=>").unwrap_or(line).trim_start();
+                let line: String = line.strip_prefix("=>").unwrap_or(&line).trim_start().to_string();
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 let link: &str = parts[0];
                 links.push(link.to_string());
@@ -435,7 +436,7 @@ impl Client {
                 }
               },
               line if line.starts_with("*") => {
-                let line: &str = line.strip_prefix("*").unwrap_or(line).trim_start();
+                let line: String = line.strip_prefix("*").unwrap_or(&line).trim_start().to_string();
                 let line: String = format!("{} {}","\u{2022}",line);
                 let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {
@@ -446,7 +447,7 @@ impl Client {
                 raw ^= true;
               },
               _   => {
-                let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+                let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {
                   formatted.push(Line::raw(line));
                 }
@@ -455,7 +456,7 @@ impl Client {
           }
         },
         _ => {
-          let lines: Vec<String> = wrap(line,width).iter().map(|s| s.to_string()).collect();
+          let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
           for line in lines {
             formatted.push(Line::raw(line));
           }
