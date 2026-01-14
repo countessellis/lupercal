@@ -46,7 +46,7 @@ impl Client {
       Ok(store) => {
         log::info!("Key store created successfully.");
         log::info!("Starting listener...");
-        //Self::splash();
+        Self::splash();
         Some(Client { config: config.clone(), keys: store.clone() })
       },
       Err(err)    => {
@@ -165,10 +165,14 @@ impl Client {
     }
   }
 
-  pub(crate) fn display(&self, response: &Response) -> Option<Request> {
+  pub(crate) fn tui(&self, response: &Response) {
     let mut request: Option<Request> = None;
     let mut response: Response = response.clone();
     let mut terminal = ratatui::init();
+    let hold: Option<Hold> = match Hold::stderr() {
+      Ok(hold) => Some(hold),
+      Err(_)    => None,
+    };
     let mut vert_scroll_pos: usize = 0;
     let mut hori_scroll_pos: usize = 0;
     let mut line_count: usize = 0;
@@ -191,7 +195,7 @@ impl Client {
                 Some((subtype,text)) => {
                   match terminal::enable_raw_mode() {
                     Ok(()) => {},
-                    Err(_) => return None,
+                    Err(_) => return,
                   }
                   let block = Block::bordered()
                     .title(Line::from(format!(" {} [{}] ",APP_NAME,source.next)).centered())
@@ -272,7 +276,18 @@ impl Client {
                                                     match url.scheme() {
                                                       "gemini" => {
                                                         request = Some(Request::new(&self.config,&link,&Some(source.clone())));
-                                                        break 'main;
+                                                        match request {
+                                                          Some(ref request) => {
+                                                            match self.request(&request) {
+                                                              Some(next) => {
+                                                                response = next;
+                                                                continue 'main;
+                                                              },
+                                                              None => break,
+                                                            }
+                                                          },
+                                                          None => break,
+                                                        }
                                                       },
                                                       _ => {
                                                         log::error!("Using {} protocol is not supported, only gemini is.",url.scheme());
@@ -298,7 +313,18 @@ impl Client {
                             KeyCode::Esc | KeyCode::Char('q') => break,
                             KeyCode::Backspace | KeyCode::Char('p') => {
                               request = source.prev();
-                              break
+                              match request {
+                                Some(ref request) => {
+                                  match self.request(&request) {
+                                    Some(next) => {
+                                      response = next;
+                                      continue 'main;
+                                    },
+                                    None => break,
+                                  }
+                                },
+                                None => break,
+                              }
                             },
                             KeyCode::Enter | KeyCode::Down | KeyCode::Char('j') => {
                               vert_scroll_pos = vert_scroll_pos.saturating_add(1).min(max_vert_scroll);
@@ -345,7 +371,7 @@ impl Client {
                     },
                     Err(err) => {
                       log::error!("Failed to poll for event: {}",err);
-                      return None;
+                      return;
                     },
                   }
                 },
@@ -365,15 +391,18 @@ impl Client {
             },
             None => {
               log::error!("Failed to convert {} to a URL.",source.next);
-              return None;
+              return;
             },
           }
         },
-        None => return None,
+        None => return,
       }
     }
     ratatui::restore();
-    request
+    match hold {
+      Some(hold) => drop(hold),
+      None       => {},
+    }
   }
 
   fn format(subtype: String, text: String, width: usize) -> (Vec<Line<'static>>,Vec<String>) {

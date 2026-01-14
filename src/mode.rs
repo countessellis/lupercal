@@ -2,7 +2,6 @@ use std::env::{args,Args};
 use std::str::FromStr;
 use std::fmt;
 
-use crate::defaults::*;
 use crate::util;
 
 ///////////// Mode

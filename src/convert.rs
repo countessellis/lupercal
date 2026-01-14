@@ -4,8 +4,6 @@ use std::io::BufReader;
 use std::fs::File;
 use std::io::BufRead;
 use std::ffi::OsStr;
-use fs_extra::dir::CopyOptions;
-use fs_extra::copy_items;
 use walkdir::WalkDir;
 use std::io::ErrorKind;
 

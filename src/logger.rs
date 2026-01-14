@@ -1,7 +1,5 @@
 use log::{LevelFilter,Level};
 use std::str::FromStr;
-use std::io::Write;
-use tracing_log::LogTracer;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Registry};
 use tracing_subscriber::Layer;
 
