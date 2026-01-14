@@ -56,7 +56,7 @@ impl Client {
     }
   }
 
-  pub(crate) fn request(&self,request: &Request) -> Option<Request> {
+  pub(crate) fn request(&self,request: &Request) -> Option<Response> {
     match request.as_url() {
       Some(url) => {
         log::info!("Making request for: {}",request.next);
@@ -80,10 +80,7 @@ impl Client {
                                   match Response::from_bytes(&Some(request.clone()),&bytes) {
                                     Ok(response) => {
                                       log::debug!("All bytes returned: {}",bytes.len());
-                                      let err = Hold::stderr().unwrap();
-                                      let result = self.display(&request,&response);
-                                      drop(err);
-                                      return result;
+                                      return Some(response);
                                     },
                                     Err(err) => {
                                       log::error!("Failed to parse response from {}: {}",request.next,err);  
@@ -99,10 +96,7 @@ impl Client {
                                     match Response::from_bytes(&Some(request.clone()),&bytes) {
                                       Ok(response) => {
                                         log::debug!("All bytes returned: {}",bytes.len());
-                                        //let err = Hold::stderr().unwrap();
-                                        let result = self.display(&request,&response);
-                                        //drop(err);
-                                        return result;
+                                        return Some(response);
                                       },
                                       Err(err) => {
                                         log::error!("Failed to parse response from {}: {}",request.next,err);  
@@ -171,208 +165,213 @@ impl Client {
     }
   }
 
-  pub(crate) fn display(&self, source: &Request, response: &Response) -> Option<Request> {
+  pub(crate) fn display(&self, response: &Response) -> Option<Request> {
     let mut request: Option<Request> = None;
-    match source.as_url() {
-      Some(url) => {
-        let payload: Option<(String,String)> = response.text();
-        match payload {
-          Some((subtype,text)) => {
-            match terminal::enable_raw_mode() {
-              Ok(()) => {},
-              Err(_) => return None,
-            }
-            let mut terminal = ratatui::init();
-            let mut vert_scroll_pos: usize = 0;
-            let mut hori_scroll_pos: usize = 0;
-            let mut line_count: usize = 0;
-            let mut link_count: usize = 0;
-            let mut page_len: usize = 0;
-            let mut max_width: usize = 0;
-            let mut max_hori_scroll: usize = 0;
-            let mut vert_scroll_state: ScrollbarState  = Default::default();
-            let mut hori_scroll_state: ScrollbarState  = Default::default();
-            let logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
-            let mut lines: Vec<Line> = Vec::new();
-            let mut links: Vec<String> = Vec::new();
-            'main: loop {
-              let block = Block::bordered()
-                .title(Line::from(format!(" {} [{}] ",APP_NAME,source.next)).centered())
-                .title_bottom(Line::from("q to quit, number for link").centered())
-                .borders(Borders::ALL)
-                .border_type(BorderType::Double)
-                .border_style(Style::default().add_modifier(Modifier::BOLD))
-                .padding(Padding::new(1,1,1,1));
-              match terminal.draw(|frame| {
-                let chunks = Layout::vertical([Constraint::Min(0),Constraint::Length(26)]).split(frame.area());
-                let main_area = chunks[0];
-                let log_area = chunks[1];
-                let unformatted: Vec<&str> = text.lines().collect();
-                (lines,links) = Self::format(subtype.clone(),unformatted,(main_area.width-4) as usize);
-                line_count = lines.len();
-                link_count = links.len();
-                max_width = lines.iter().map(|line| line.width()).max().unwrap_or(0);
-                max_hori_scroll = max_width-(main_area.width as usize)+10;
-                let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((vert_scroll_pos as u16,hori_scroll_pos as u16)).block(block);
-                vert_scroll_state.content_length(line_count).position(vert_scroll_pos);
-                hori_scroll_state.content_length(max_width).position(hori_scroll_pos);
-                page_len = main_area.height as usize - 1;
-                frame.render_widget(&paragraph,main_area);
-                frame.render_stateful_widget(
-                  Scrollbar::new(ScrollbarOrientation::VerticalRight),
-                  main_area.inner(Margin { vertical: 1, horizontal: 0 }),
-                  &mut vert_scroll_state,
-                );
-                frame.render_stateful_widget(
-                  Scrollbar::new(ScrollbarOrientation::HorizontalBottom),
-                  main_area.inner(Margin { vertical: 0, horizontal: 1 }),
-                  &mut vert_scroll_state,
-                );
-                let log_widget = TuiLoggerWidget::default()
-                  .block(Block::bordered().title("Log"))
-                  .style_error(Style::default().fg(Color::Red))
-                  .style_warn(Style::default().fg(Color::Yellow))
-                  .style_info(Style::default().fg(Color::Blue))
-                  .style_debug(Style::default().fg(Color::Green))
-                  .style_trace(Style::default().fg(Color::Gray))
-                  .state(&logger_state);
-                frame.render_widget(log_widget, log_area);
-              }) {
-                Ok(_) => {},
-                Err(err) => {
-                  log::error!("Failed to display response: {}",err);
-                  break;
-                },
-              }
-              let max_vert_scroll: usize = if line_count+2 < page_len { 0 } else { line_count+2-page_len };
-              tui_logger::move_events();
-              match event::poll(Duration::from_millis(250)) {
-                Ok(b) => if b {
-                  if let Ok(Event::Key(key)) = event::read() {
-                    if key.kind == KeyEventKind::Press {
-                      match key.code {
-                        KeyCode::Char(c) if c.to_digit(10).is_some() => {
-                          let mut link_number: Vec<char> = Vec::new();
-                          let index: usize = c.to_digit(10).unwrap() as usize;
-                          link_number.push(c);
-                          loop {
-                            match event::poll(Duration::from_millis(250)) {
-                              Ok(b) => if b {
-                                if let Ok(Event::Key(key)) = event::read() {
-                                  if key.kind == KeyEventKind::Press {
-                                    match key.code {
-                                      KeyCode::Char(c) if c.to_digit(10).is_some() => {
-                                        link_number.push(c);
-                                      },
-                                      KeyCode::Enter => {
-                                        let link_number: String = link_number.into_iter().collect();
-                                        if let Ok(index) = link_number.parse::<usize>() {
-                                          if index <= link_count {
-                                            let mut link: String = links[index - 1].clone();
-                                            link = util::build_abs_url(&url,&link);
-                                            log::info!("Link {} chosen, link is: {}",c,link);
-                                            match Url::parse(&link) {
-                                              Ok(url) => {
-                                                match url.scheme() {
-                                                  "gemini" => {
-                                                    request = Some(Request::new(&self.config,&link,&Some(source.clone())));
-                                                    break 'main;
-                                                  },
-                                                  _ => {
-                                                    log::error!("Using {} protocol is not supported, only gemini is.",url.scheme());
-                                                    break;
-                                                  },
-                                                }
-                                              },
-                                              Err(_) => break,
-                                            }
-                                          }
-                                        }
-                                        break;
-                                      },
-                                      _ => break,
-                                    }
-                                  }
-                                }
-                              },
-                              Err(_) => break,
-                            }
-                          }
-                        },
-                        KeyCode::Esc | KeyCode::Char('q') => break,
-                        KeyCode::Backspace | KeyCode::Char('p') => {
-                          request = source.prev();
-                          break
-                        },
-                        KeyCode::Enter | KeyCode::Down | KeyCode::Char('j') => {
-                          vert_scroll_pos = vert_scroll_pos.saturating_add(1).min(max_vert_scroll);
-                          vert_scroll_state.position(vert_scroll_pos);
-                        },
-                        KeyCode::Up | KeyCode::Char('k') => {
-                          vert_scroll_pos = vert_scroll_pos.saturating_sub(1);
-                          vert_scroll_state.position(vert_scroll_pos);
-                        },
-                        KeyCode::Char(' ') | KeyCode::PageDown | KeyCode::Char('v') => {
-                          vert_scroll_pos = vert_scroll_pos.saturating_add(page_len).min(max_vert_scroll);
-                          vert_scroll_state.position(vert_scroll_pos);
-                        },
-                        KeyCode::PageUp | KeyCode::Char('b') => {
-                          vert_scroll_pos = vert_scroll_pos.saturating_sub(page_len);
-                          vert_scroll_state.position(vert_scroll_pos);
-                        },
-                        KeyCode::Home | KeyCode::Char('g') => {
-                          vert_scroll_pos = 0;
-                          vert_scroll_state.position(vert_scroll_pos);
-                        },
-                        KeyCode::End | KeyCode::Char('G') => {
-                          vert_scroll_pos = max_vert_scroll;
-                          vert_scroll_state.position(vert_scroll_pos);
-                        },
-                        KeyCode::Right => {
-                          hori_scroll_pos = hori_scroll_pos.saturating_add(1).min(max_hori_scroll);
-                          hori_scroll_state.position(hori_scroll_pos);
-                        },
-                        KeyCode::Left => {
-                          hori_scroll_pos = hori_scroll_pos.saturating_sub(1);
-                          hori_scroll_state.position(hori_scroll_pos);
-                        },
-                        KeyCode::Char('s') => {
-                          match response.save(&self.config) {
-                            Ok(path) => log::info!("Saved to {}",path),
-                            Err(err) => log::error!("Failed to save to file: {}",err),
-                          }
-                        },
-                        _ => {},
-                      }
-                    }
+    match response.request {
+      Some(ref source) => {
+        match source.as_url() {
+          Some(url) => {
+            let payload: Option<(String,String)> = response.text();
+            match payload {
+              Some((subtype,text)) => {
+                match terminal::enable_raw_mode() {
+                  Ok(()) => {},
+                  Err(_) => return None,
+                }
+                let mut terminal = ratatui::init();
+                let mut vert_scroll_pos: usize = 0;
+                let mut hori_scroll_pos: usize = 0;
+                let mut line_count: usize = 0;
+                let mut link_count: usize = 0;
+                let mut page_len: usize = 0;
+                let mut max_width: usize = 0;
+                let mut max_hori_scroll: usize = 0;
+                let mut vert_scroll_state: ScrollbarState  = Default::default();
+                let mut hori_scroll_state: ScrollbarState  = Default::default();
+                let logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
+                let mut lines: Vec<Line> = Vec::new();
+                let mut links: Vec<String> = Vec::new();
+                'main: loop {
+                  let block = Block::bordered()
+                    .title(Line::from(format!(" {} [{}] ",APP_NAME,source.next)).centered())
+                    .title_bottom(Line::from("q to quit, number for link").centered())
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Double)
+                    .border_style(Style::default().add_modifier(Modifier::BOLD))
+                    .padding(Padding::new(1,1,1,1));
+                  match terminal.draw(|frame| {
+                    let chunks = Layout::vertical([Constraint::Min(0),Constraint::Length(26)]).split(frame.area());
+                    let main_area = chunks[0];
+                    let log_area = chunks[1];
+                    let unformatted: Vec<&str> = text.lines().collect();
+                    (lines,links) = Self::format(subtype.clone(),unformatted,(main_area.width-4) as usize);
+                    line_count = lines.len();
+                    link_count = links.len();
+                    max_width = lines.iter().map(|line| line.width()).max().unwrap_or(0);
+                    max_hori_scroll = max_width.saturating_sub(main_area.width as usize).saturating_add(10);
+                    let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((vert_scroll_pos as u16,hori_scroll_pos as u16)).block(block);
+                    vert_scroll_state.content_length(line_count).position(vert_scroll_pos);
+                    hori_scroll_state.content_length(max_width).position(hori_scroll_pos);
+                    page_len = main_area.height as usize - 1;
+                    frame.render_widget(&paragraph,main_area);
+                    frame.render_stateful_widget(
+                      Scrollbar::new(ScrollbarOrientation::VerticalRight),
+                      main_area.inner(Margin { vertical: 1, horizontal: 0 }),
+                      &mut vert_scroll_state,
+                    );
+                    frame.render_stateful_widget(
+                      Scrollbar::new(ScrollbarOrientation::HorizontalBottom),
+                      main_area.inner(Margin { vertical: 0, horizontal: 1 }),
+                      &mut vert_scroll_state,
+                    );
+                    let log_widget = TuiLoggerWidget::default()
+                      .block(Block::bordered().title("Log"))
+                      .style_error(Style::default().fg(Color::Red))
+                      .style_warn(Style::default().fg(Color::Yellow))
+                      .style_info(Style::default().fg(Color::Blue))
+                      .style_debug(Style::default().fg(Color::Green))
+                      .style_trace(Style::default().fg(Color::Gray))
+                      .state(&logger_state);
+                    frame.render_widget(log_widget, log_area);
+                  }) {
+                    Ok(_) => {},
+                    Err(err) => {
+                      log::error!("Failed to display response: {}",err);
+                      break;
+                    },
                   }
-                },
-                Err(err) => {
-                  log::error!("Failed to poll for event: {}",err);
-                  return None;
-                },
-              }
-            }
-            ratatui::restore();
-          },
-          None => {
-            match response.datatype() {
-              Some(_) => {
-                log::info!("Received non-text file, saving to cache.");
-                match response.save(&self.config) {
-                  Ok(path) => log::info!("Saved to {}",path),
-                  Err(err) => log::error!("Failed to save to file: {}",err),
+                  let max_vert_scroll: usize = if line_count+2 < page_len { 0 } else { line_count+2-page_len };
+                  tui_logger::move_events();
+                  match event::poll(Duration::from_millis(250)) {
+                    Ok(b) => if b {
+                      if let Ok(Event::Key(key)) = event::read() {
+                        if key.kind == KeyEventKind::Press {
+                          match key.code {
+                            KeyCode::Char(c) if c.to_digit(10).is_some() => {
+                              let mut link_number: Vec<char> = Vec::new();
+                              let index: usize = c.to_digit(10).unwrap() as usize;
+                              link_number.push(c);
+                              loop {
+                                match event::poll(Duration::from_millis(250)) {
+                                  Ok(b) => if b {
+                                    if let Ok(Event::Key(key)) = event::read() {
+                                      if key.kind == KeyEventKind::Press {
+                                        match key.code {
+                                          KeyCode::Char(c) if c.to_digit(10).is_some() => {
+                                            link_number.push(c);
+                                          },
+                                          KeyCode::Enter => {
+                                            let link_number: String = link_number.into_iter().collect();
+                                            if let Ok(index) = link_number.parse::<usize>() {
+                                              if index <= link_count {
+                                                let mut link: String = links[index - 1].clone();
+                                                link = util::build_abs_url(&url,&link);
+                                                log::info!("Link {} chosen, link is: {}",c,link);
+                                                match Url::parse(&link) {
+                                                  Ok(url) => {
+                                                    match url.scheme() {
+                                                      "gemini" => {
+                                                        request = Some(Request::new(&self.config,&link,&Some(source.clone())));
+                                                        break 'main;
+                                                      },
+                                                      _ => {
+                                                        log::error!("Using {} protocol is not supported, only gemini is.",url.scheme());
+                                                        break;
+                                                      },
+                                                    }
+                                                  },
+                                                  Err(_) => break,
+                                                }
+                                              }
+                                            }
+                                            break;
+                                          },
+                                          _ => break,
+                                        }
+                                      }
+                                    }
+                                  },
+                                  Err(_) => break,
+                                }
+                              }
+                            },
+                            KeyCode::Esc | KeyCode::Char('q') => break,
+                            KeyCode::Backspace | KeyCode::Char('p') => {
+                              request = source.prev();
+                              break
+                            },
+                            KeyCode::Enter | KeyCode::Down | KeyCode::Char('j') => {
+                              vert_scroll_pos = vert_scroll_pos.saturating_add(1).min(max_vert_scroll);
+                              vert_scroll_state.position(vert_scroll_pos);
+                            },
+                            KeyCode::Up | KeyCode::Char('k') => {
+                              vert_scroll_pos = vert_scroll_pos.saturating_sub(1);
+                              vert_scroll_state.position(vert_scroll_pos);
+                            },
+                            KeyCode::Char(' ') | KeyCode::PageDown | KeyCode::Char('v') => {
+                              vert_scroll_pos = vert_scroll_pos.saturating_add(page_len).min(max_vert_scroll);
+                              vert_scroll_state.position(vert_scroll_pos);
+                            },
+                            KeyCode::PageUp | KeyCode::Char('b') => {
+                              vert_scroll_pos = vert_scroll_pos.saturating_sub(page_len);
+                              vert_scroll_state.position(vert_scroll_pos);
+                            },
+                            KeyCode::Home | KeyCode::Char('g') => {
+                              vert_scroll_pos = 0;
+                              vert_scroll_state.position(vert_scroll_pos);
+                            },
+                            KeyCode::End | KeyCode::Char('G') => {
+                              vert_scroll_pos = max_vert_scroll;
+                              vert_scroll_state.position(vert_scroll_pos);
+                            },
+                            KeyCode::Right => {
+                              hori_scroll_pos = hori_scroll_pos.saturating_add(1).min(max_hori_scroll);
+                              hori_scroll_state.position(hori_scroll_pos);
+                            },
+                            KeyCode::Left => {
+                              hori_scroll_pos = hori_scroll_pos.saturating_sub(1);
+                              hori_scroll_state.position(hori_scroll_pos);
+                            },
+                            KeyCode::Char('s') => {
+                              match response.save(&self.config) {
+                                Ok(path) => log::info!("Saved to {}",path),
+                                Err(err) => log::error!("Failed to save to file: {}",err),
+                              }
+                            },
+                            _ => {},
+                          }
+                        }
+                      }
+                    },
+                    Err(err) => {
+                      log::error!("Failed to poll for event: {}",err);
+                      return None;
+                    },
+                  }
+                }
+                ratatui::restore();
+              },
+              None => {
+                match response.datatype() {
+                  Some(_) => {
+                    log::info!("Received non-text file, saving to cache.");
+                    match response.save(&self.config) {
+                      Ok(path) => log::info!("Saved to {}",path),
+                      Err(err) => log::error!("Failed to save to file: {}",err),
+                    }
+                  },
+                  None => {},
                 }
               },
-              None => {},
             }
+          },
+          None => {
+            log::error!("Failed to convert {} to a URL.",source.next);
+            return None;
           },
         }
       },
-      None => {
-        log::error!("Failed to convert {} to a URL.",source.next);
-        return None;
-      },
+      None => return None,
     }
     request
   }
