@@ -109,11 +109,6 @@ impl Response {
   }
 
   pub(crate) fn save(&self,config: &Config) -> Result<String,String> {
-    let cache_dir: String = match config.mode {
-      Mode::Server => config.server_cache_dir.clone(),
-      Mode::Proxy  => config.proxy_cache_dir.clone(),
-      _            => config.client_cache_dir.clone(),
-    };
     match self.as_url() {
       Some(url) => {
         let host: String = match url.host() {
@@ -127,7 +122,7 @@ impl Response {
         } else {
           url.path().to_string()
         };
-        let save_path: String = format!("{}/{}{}",cache_dir,host,file_path);
+        let save_path: String = format!("{}/{}{}",config.cache_dir,host,file_path);
         let path = Path::new(&save_path);
         if let Some(parent_dir) = path.parent() {
           match fs::create_dir_all(parent_dir) {

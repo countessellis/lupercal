@@ -37,7 +37,7 @@ impl Server {
         log::info!("Starting listener...");
         let socket: TcpListener = match TcpListener::bind(format!("{}:{}",config.listen_addr,DEFAULT_LISTEN_PORT)) {
           Ok(socket) => {
-            log::info!("Server {} listening on {}:{}",config.server_name,config.listen_addr,DEFAULT_LISTEN_PORT);
+            log::info!("Server {} listening on {}:{}",config.name,config.listen_addr,DEFAULT_LISTEN_PORT);
             socket
           },
           Err(err)   => {

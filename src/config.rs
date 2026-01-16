@@ -9,96 +9,96 @@ use crate::util;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Config {
-  // General:
   pub(crate) mode: Mode,
-  pub(crate) server_name: String,
+  pub(crate) name: String,
   pub(crate) listen_addr: String,
-  // Server related:
   pub(crate) content_dir: String,
-  pub(crate) server_cache_dir: String,
-  pub(crate) server_store_dir: String,
-  // Client related:
-  pub(crate) client_name: String,
-  pub(crate) client_cache_dir: String,
-  pub(crate) client_store_dir: String,
-  // Proxy related:
-  pub(crate) proxy_name: String,
-  pub(crate) proxy_cache_dir: String,
-  pub(crate) proxy_store_dir: String,
-  // Convert related:
+  pub(crate) cache_dir: String,
+  pub(crate) store_dir: String,
   pub(crate) convert_in: String,
   pub(crate) convert_out: String,
 }
 
 impl Config {
-  pub(crate) fn defaults() -> Config {
-    let server_cache_dir: String = match dirs::cache_dir() {
-      Some(cache) => {
-        format!("{}/{}/server",cache.display().to_string(),BUILD_NAME)
-      },
-      None => {
-        DEFAULT_SERVER_CACHE_DIR.to_string()
-      },
+  pub(crate) fn defaults(mode: &Mode) -> Config {
+    let name: String = match mode {
+      Mode::Server | Mode::Proxy => DEFAULT_SERVER_NAME.to_string(),
+      _                          => DEFAULT_CLIENT_NAME.to_string(),
     };
-    let server_store_dir: String = match dirs::cache_dir() {
-      Some(cache) => {
-        format!("{}/{}/server/store/",cache.display().to_string(),BUILD_NAME)
+    let cache_dir: String = match mode {
+      Mode::Server => {
+        match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/server",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_SERVER_CACHE_DIR.to_string()
+          },
+        }
       },
-      None => {
-        DEFAULT_SERVER_STORE_DIR.to_string()
+      Mode::Proxy => {
+        match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/proxy",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_PROXY_CACHE_DIR.to_string()
+          },
+        }
       },
+      Mode::Client => {
+        match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/client",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_CLIENT_CACHE_DIR.to_string()
+          },
+        }
+      },
+      _ => String::new(),
     };
-    let client_cache_dir: String = match dirs::cache_dir() {
-      Some(cache) => {
-        format!("{}/{}/client",cache.display().to_string(),BUILD_NAME)
+    let store_dir: String = match mode {
+      Mode::Server => {
+        match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/server/store/",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_SERVER_STORE_DIR.to_string()
+          },
+        }
       },
-      None => {
-        DEFAULT_CLIENT_CACHE_DIR.to_string()
+      Mode::Proxy => {
+        match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/proxy/store/",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_PROXY_STORE_DIR.to_string()
+          },
+        }
       },
-    };
-    let client_store_dir: String = match dirs::cache_dir() {
-      Some(cache) => {
-        format!("{}/{}/client/store/",cache.display().to_string(),BUILD_NAME)
+      Mode::Client => {
+        match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/client/store/",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_CLIENT_STORE_DIR.to_string()
+          },
+        }
       },
-      None => {
-        DEFAULT_CLIENT_STORE_DIR.to_string()
-      },
-    };
-    let proxy_cache_dir: String = match dirs::cache_dir() {
-      Some(cache) => {
-        format!("{}/{}/proxy",cache.display().to_string(),BUILD_NAME)
-      },
-      None => {
-        DEFAULT_PROXY_CACHE_DIR.to_string()
-      },
-    };
-    let proxy_store_dir: String = match dirs::cache_dir() {
-      Some(cache) => {
-        format!("{}/{}/proxy/store/",cache.display().to_string(),BUILD_NAME)
-      },
-      None => {
-        DEFAULT_PROXY_STORE_DIR.to_string()
-      },
+      _ => String::new(),
     };
     Config {
-      // General:
-      mode:             Default::default(),
-      // Server related:
-      server_name:      DEFAULT_SERVER_NAME.to_string(),
-      listen_addr:      DEFAULT_LISTEN_ADDR.to_string(),
-      content_dir:      DEFAULT_CONTENT_DIR.to_string(),
-      server_cache_dir: server_cache_dir,
-      server_store_dir: server_store_dir,
-      // Client related:
-      client_name:      DEFAULT_CLIENT_NAME.to_string(),
-      client_cache_dir: client_cache_dir,
-      client_store_dir: client_store_dir,
-      // Proxy related:
-      proxy_name:      DEFAULT_PROXY_NAME.to_string(),
-      proxy_cache_dir: proxy_cache_dir,
-      proxy_store_dir: proxy_store_dir,
-      // Convert related:
-      convert_in: String::new(),
+      mode:        mode.clone(),
+      name:        name,
+      listen_addr: DEFAULT_LISTEN_ADDR.to_string(),
+      content_dir: DEFAULT_CONTENT_DIR.to_string(),
+      cache_dir:   cache_dir,
+      store_dir:   store_dir,
+      convert_in:  String::new(),
       convert_out: String::new(),
     }
   }
@@ -106,23 +106,14 @@ impl Config {
   pub fn write(&self,config_file: &String) -> Result<String,String> {
     let config_file: String = util::build_path(&config_file,&"config".to_string());
     let mut config: Vec<String> = Vec::new();
-    // General:
     config.push(format!("mode: {}",self.mode));
-    // Server related:
-    config.push(format!("server_name: {}",self.server_name));
+    config.push(format!("name: {}",self.name));
     config.push(format!("listen_addr: {}",self.listen_addr));
     config.push(format!("content_dir: {}",self.content_dir));
-    config.push(format!("server_cache_dir: {}",self.server_cache_dir));
-    config.push(format!("server_store_dir: {}",self.server_store_dir));
-    // Client related:
-    config.push(format!("client_name: {}",self.client_name));
-    config.push(format!("client_cache_dir: {}",self.client_cache_dir));
-    config.push(format!("client_store_dir: {}",self.client_store_dir));
-    // Proxy related:
-    config.push(format!("proxy_name: {}",self.proxy_name));
-    config.push(format!("proxy_cache_dir: {}",self.proxy_cache_dir));
-    config.push(format!("proxy_store_dir: {}",self.proxy_store_dir));
-    // Build:
+    config.push(format!("cache_dir: {}",self.cache_dir));
+    config.push(format!("store_dir: {}",self.store_dir));
+    config.push(format!("convert_in: {}",self.convert_in));
+    config.push(format!("convert_out: {}",self.convert_out));
     config.push("".to_string());
     match write(&config_file,config.join("\n")) {
       Ok(()) => Ok(format!("Outputted config to {}",config_file)),
@@ -130,34 +121,96 @@ impl Config {
     }
   }
 
-  pub fn new() -> Config {
-    let mut config = Config::defaults();
+  pub fn new(mode: &Mode) -> Config {
+    let mut config = Config::defaults(&mode);
     println!("\n");
     // General:
     config.mode = match Mode::from_str(util::prompt(format!("Mode: (server/proxy/client/convert, default: {})",config.mode),config.mode.to_string()).as_str()) {
       Ok(mode) => mode,
       Err(_)   => Default::default(),
     };
-    // Server related:
-    config.server_name = util::prompt(format!("Server fully qualified domain name: (default: {})",config.server_name),config.server_name);
-    config.listen_addr = util::prompt(format!("Server listening address: (default: {})",config.listen_addr),config.listen_addr);
-    config.content_dir = util::prompt(format!("Content directory: (default: {})",config.content_dir),config.content_dir);
-    config.server_cache_dir = util::prompt(format!("Server cache directory: (default: {})",config.server_cache_dir),config.server_cache_dir);
-    config.server_store_dir = util::prompt(format!("Server store directory: (default: {})",config.server_store_dir),config.server_store_dir);
-    // Client related:
-    config.client_name = util::prompt(format!("Client identifying name: (typically username@hostname or email address, default: {})",config.client_name),config.client_name);
-    config.client_cache_dir = util::prompt(format!("Client cache directory: (default: {})",config.client_cache_dir),config.client_cache_dir);
-    config.client_store_dir = util::prompt(format!("Client store directory: (default: {})",config.client_store_dir),config.client_store_dir);
-    // Proxy related:
-    config.proxy_name = util::prompt(format!("Proxy identifying name: (typically username@hostname or email address, default: {})",config.proxy_name),config.proxy_name);
-    config.proxy_cache_dir = util::prompt(format!("Proxy cache directory: (default: {})",config.proxy_cache_dir),config.proxy_cache_dir);
-    config.proxy_store_dir = util::prompt(format!("Proxy store directory: (default: {})",config.proxy_store_dir),config.proxy_store_dir);
+    match config.mode {
+      Mode::Server => {
+        let name: String = match mode {
+          Mode::Server | Mode::Proxy => DEFAULT_SERVER_NAME.to_string(),
+          _                          => DEFAULT_CLIENT_NAME.to_string(),
+        };
+        config.name = util::prompt(format!("Server fully qualified domain name: (default: {})",DEFAULT_SERVER_NAME),DEFAULT_SERVER_NAME.to_string());
+        config.listen_addr = util::prompt(format!("Server listening address: (default: {})",config.listen_addr),config.listen_addr);
+        config.content_dir = util::prompt(format!("Content directory: (default: {})",config.content_dir),config.content_dir);
+        config.cache_dir = match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/server",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_SERVER_CACHE_DIR.to_string()
+          },
+        };
+        config.cache_dir = util::prompt(format!("Server cache directory: (default: {})",config.cache_dir),config.cache_dir);
+        config.store_dir = match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/server/store/",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_SERVER_STORE_DIR.to_string()
+          },
+        };
+        config.store_dir = util::prompt(format!("Server store directory: (default: {})",config.store_dir),config.store_dir);
+      },
+      Mode::Proxy => {
+        config.name = util::prompt(format!("Proxy fully qualified domain name: (default: {})",DEFAULT_SERVER_NAME),DEFAULT_SERVER_NAME.to_string());
+        config.listen_addr = util::prompt(format!("Proxy listening address: (default: {})",config.listen_addr),config.listen_addr);
+        config.cache_dir = match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/proxy",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_PROXY_CACHE_DIR.to_string()
+          },
+        };
+        config.cache_dir = util::prompt(format!("Proxy cache directory: (default: {})",config.cache_dir),config.cache_dir);
+        config.store_dir = match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/proxy/store/",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_PROXY_STORE_DIR.to_string()
+          },
+        };
+        config.store_dir = util::prompt(format!("Proxy store directory: (default: {})",config.store_dir),config.store_dir);
+      },
+      Mode::Client => {
+        config.name = util::prompt(format!("Client identifying name: (typically username@hostname or email address, default: {})",DEFAULT_CLIENT_NAME),DEFAULT_CLIENT_NAME.to_string());
+        config.cache_dir = match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/client",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_CLIENT_CACHE_DIR.to_string()
+          },
+        };
+        config.cache_dir = util::prompt(format!("Client cache directory: (default: {})",config.cache_dir),config.cache_dir);
+        config.store_dir = match dirs::cache_dir() {
+          Some(cache) => {
+            format!("{}/{}/client/store/",cache.display().to_string(),BUILD_NAME)
+          },
+          None => {
+            DEFAULT_CLIENT_STORE_DIR.to_string()
+          },
+        };
+        config.store_dir = util::prompt(format!("Client store directory: (default: {})",config.store_dir),config.store_dir);
+      },
+      Mode::Convert => {
+        config.convert_in = util::prompt(String::from("Incoming location (file or directory) for convert."),config.convert_in);
+        config.convert_out = util::prompt(String::from("Outgoing directory for convert."),config.convert_out);
+      },
+    }
     // Build:
     println!("\n");
     config
   }
 
-  pub fn from_file(config_path: &String) -> Config {
+  pub fn from_file(config_path: &String, mode: &Mode) -> Config {
     let mut config_file: String = Config::path_from_args(config_path);
     config_file = match fs::exists(&config_file) {
       Ok(true) => config_file.clone(),
@@ -165,7 +218,7 @@ impl Config {
         Ok(true)  => DEFAULT_CONFIG_DIR.to_string()+config_file.as_str(),
         Ok(false) => {
           println!("Config file {} does not exist.",config_file);
-          let config: Config = Config::new();
+          let config: Config = Config::new(&mode);
           let to_file: bool = util::prompt(format!("Write config to new file at {}? (true/false, default false)",config_file),"false".to_string()).parse().unwrap_or(false);
           if to_file {
             match config.write(&config_file) {
@@ -177,7 +230,7 @@ impl Config {
         },
         Err(err) => {
           eprintln!("Error testing if {} exists: {}",config_file,err);
-          return Config::defaults()
+          return Config::defaults(&mode)
         }
       }
     };
@@ -186,7 +239,7 @@ impl Config {
       .lines()
       .map(String::from)
       .collect();
-    let mut config = Config::defaults();
+    let mut config = Config::defaults(&mode);
     for line in lines {
       let pair: Vec<&str> = line.split(":").collect();
       if pair.len() > 1 {
@@ -197,22 +250,12 @@ impl Config {
             Ok(mode) => mode,
             Err(_)   => Default::default(),
           },
-          // Server related:
-          "server_name" => config.server_name = value.clone(),
+          "name"        => config.name = value.clone(),
           "listen_addr" => config.listen_addr = value.clone(),
           "content_dir" => config.content_dir = value.clone(),
-          "server_cache_dir" => config.server_cache_dir = value.clone(),
-          "server_store_dir" => config.server_store_dir = value.clone(),
-          // Client related:
-          "client_name" => config.client_name = value.clone(),
-          "client_cache_dir" => config.client_cache_dir = value.clone(),
-          "client_store_dir" => config.client_store_dir = value.clone(),
-          // Proxy related:
-          "proxy_name" => config.proxy_name = value.clone(),
-          "proxy_cache_dir" => config.proxy_cache_dir = value.clone(),
-          "proxy_store_dir" => config.proxy_store_dir = value.clone(),
-          // Convert related:
-          "convert_in" => config.convert_in = value.clone(),
+          "cache_dir"   => config.cache_dir = value.clone(),
+          "store_dir"   => config.store_dir = value.clone(),
+          "convert_in"  => config.convert_in = value.clone(),
           "convert_out" => config.convert_out = value.clone(),
           // Ignore everything else:
           _ => {},
@@ -250,7 +293,7 @@ impl Config {
       Mode::Convert => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_CONVERT_CONFIG),
       _             => format!("{}/{}/{}",config_dir,BUILD_NAME,DEFAULT_CLIENT_CONFIG),
     };
-    Config::from_file(&config_file)
+    Config::from_file(&config_file,&mode)
   }
 
   pub fn from_args(config: &Config) -> Config {
@@ -274,10 +317,9 @@ impl Config {
         "--client"   => config.mode = Mode::Client,
         "--proxy"    => config.mode = Mode::Proxy,
         "--convert"  => config.mode = Mode::Convert,
-        // Process server related options:
-        "--server_name" => {
+        "--name" => {
           match args.next() {
-            Some(value) => config.server_name = value,
+            Some(value) => config.name = value,
             None => {},
           }
         },
@@ -287,76 +329,36 @@ impl Config {
             None => {},
           }
         },
-        "--content_dir" => {
+        "--content" => {
           match args.next() {
             Some(value) => config.content_dir = value,
             None => {},
           }
         },
-        "--server_cache_dir" => {
+        "--cache" => {
           match args.next() {
-            Some(value) => config.server_cache_dir = value,
+            Some(value) => config.cache_dir = value,
             None => {},
           }
         },
-        "--server_store_dir" => {
+        "--store" => {
           match args.next() {
-            Some(value) => config.server_store_dir = value,
+            Some(value) => config.store_dir = value,
             None => {},
           }
         },
-        // Process Client related options:
-        "--client_name" => {
-          match args.next() {
-            Some(value) => config.client_name = value,
-            None => {},
-          }
-        },
-        "--client_cache_dir" => {
-          match args.next() {
-            Some(value) => config.client_cache_dir = value,
-            None => {},
-          }
-        },
-        "--client_store_dir" => {
-          match args.next() {
-            Some(value) => config.client_store_dir = value,
-            None => {},
-          }
-        },
-        // Process Proxy related options:
-        "--proxy_name" => {
-          match args.next() {
-            Some(value) => config.proxy_name = value,
-            None => {},
-          }
-        },
-        "--proxy_cache_dir" => {
-          match args.next() {
-            Some(value) => config.proxy_cache_dir = value,
-            None => {},
-          }
-        },
-        "--proxy_store_dir" => {
-          match args.next() {
-            Some(value) => config.proxy_store_dir = value,
-            None => {},
-          }
-        },
-        // Process Convert related options:
-        "--convert-in" | "--convert_in" | "--in" => {
+        "--in" => {
           match args.next() {
             Some(value) => config.convert_in = value,
             None => {},
           }
         },
-        "--convert-out" | "--convert_out" | "--out" => {
+        "--out" => {
           match args.next() {
             Some(value) => config.convert_out = value,
             None => {},
           }
         },
-        
         // Error on everything else:
         option => {
           if option.starts_with("--") {
