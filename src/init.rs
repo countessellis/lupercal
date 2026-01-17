@@ -33,6 +33,12 @@ pub fn run() {
     },
     Mode::Proxy => {
       log::debug!("Running in Proxy mode.");
+      match Server::new(&config) {
+        Some(server) => {
+          server.listen();
+        },
+        None => {},
+      }
     },
     Mode::Convert => {
       log::debug!("Running in Convert mode.");

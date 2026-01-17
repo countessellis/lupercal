@@ -7,6 +7,7 @@ use std::io::Write;
 use std::fs;
 use std::path::Path;
 
+use crate::backend::*;
 use crate::config::*;
 use crate::defaults::*;
 use crate::request::*;
@@ -19,12 +20,13 @@ pub(crate) struct Server {
   pub(crate) config: Config,
   pub(crate) keys: Store,
   pub(crate) listener: TcpListener,
+  pub(crate) backend: Backend,
 }
 
 impl Clone for Server {
   fn clone(&self) -> Self {
     let socket: TcpListener = self.listener.try_clone().unwrap();
-    Server { config: self.config.clone(), keys: self.keys.clone(), listener: socket }
+    Server { config: self.config.clone(), keys: self.keys.clone(), listener: socket, backend: self.backend.clone() }
   }
 }
 
@@ -34,6 +36,11 @@ impl Server {
     match Store::new(&config) {
       Ok(store) => {
         log::info!("Key store created successfully.");
+        log::info!("Initializing backend...");
+        let backend: Backend = match Backend::new(&config) {
+          Backend::None => return None,
+          backend => backend,
+        };
         log::info!("Starting listener...");
         let socket: TcpListener = match TcpListener::bind(format!("{}:{}",config.listen_addr,DEFAULT_LISTEN_PORT)) {
           Ok(socket) => {
@@ -45,7 +52,7 @@ impl Server {
             return None
           },
         };
-        Some(Server { config: config.clone(), keys: store.clone(), listener: socket })
+        Some(Server { config: config.clone(), keys: store.clone(), listener: socket, backend: backend })
       },
       Err(err)    => {
         log::error!("Failed to create store: {}",err);
@@ -62,6 +69,7 @@ impl Server {
           thread::spawn({
             let config: Config = self.config.clone();
             let keys: Store = self.keys.clone();
+            let backend: Backend = self.backend.clone();
             move || {
               match SslAcceptor::mozilla_modern_v5(SslMethod::tls_server()) {
                 Ok(mut builder) => {
@@ -82,52 +90,7 @@ impl Server {
                           match Request::from_bytes(&config,&buffer) {
                             Some(request) => {
                               log::debug!("Request: {}, Length: {}",request.next,len);
-                              match request.as_url() {
-                                Some(url) => {
-                                  let mut file: String = format!("{}{}",config.content_dir,url.path());
-                                  if file.ends_with("/") { file.truncate(file.len()-1); }
-                                  let path = Path::new(&file);
-                                  if path.is_dir() { file = format!("{}/index.gmi",file) }
-                                  match fs::exists(&file) {
-                                    Ok(true) => {
-                                      let path = Path::new(&file);
-                                      let mimetype: String = if let Some(extension) = path.extension() {
-                                        match extension.to_str() {
-                                          Some("gmi")     => String::from("text/gemini"),
-                                          Some("gemini")  => String::from("text/gemini"),
-                                          Some(extension) => match mime_guess::from_ext(extension).first() {
-                                            Some(guess)   => guess.essence_str().to_string(),
-                                            None          => String::from("application/octet-stream"),
-                                          },
-                                          None            => String::from("application/octet-stream"),
-                                        }
-                                      } else { String::from("application/octet-stream") };
-                                      match fs::read(&file) {
-                                        Ok(content) => {
-                                          log::info!("Returning contents of {}.",file);
-                                          Response::new(&ResponseCode::Success,&String::from(mimetype),&content,&Some(request))
-                                        },
-                                        Err(err) => {
-                                          log::error!("Failed to read file {}: {}",file,err);
-                                          Response::new(&ResponseCode::Fail,&String::from("Server Error"),&Vec::new(),&Some(request))
-                                        },
-                                      }
-                                    },
-                                    Ok(false) => {
-                                      log::error!("File {} does not exist.",file);
-                                      Response::new(&ResponseCode::FailNotFound,&format!("{} not found",url.path()),&Vec::new(),&Some(request))
-                                    },
-                                    Err(err) => {
-                                      log::error!("Error testing if {} exists: {}",file,err);
-                                      Response::new(&ResponseCode::Fail,&String::from("Server Failure"),&Vec::new(),&Some(request))
-                                    }
-                                  }
-                                },
-                                None => {
-                                  log::error!("Failed to parse uri from request.");
-                                  Response::new(&ResponseCode::FailBadReq,&String::from("Invalid URI"),&Vec::new(),&Some(request))
-                                },
-                              }
+                              backend.get(&request)
                             },
                             None => {
                               log::error!("Request format wrong.");

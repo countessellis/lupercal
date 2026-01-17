@@ -12,7 +12,7 @@ pub(crate) struct Config {
   pub(crate) mode: Mode,
   pub(crate) name: String,
   pub(crate) listen_addr: String,
-  pub(crate) content_dir: String,
+  pub(crate) source: String,
   pub(crate) cache_dir: String,
   pub(crate) store_dir: String,
   pub(crate) convert_in: String,
@@ -95,7 +95,7 @@ impl Config {
       mode:        mode.clone(),
       name:        name,
       listen_addr: DEFAULT_LISTEN_ADDR.to_string(),
-      content_dir: DEFAULT_CONTENT_DIR.to_string(),
+      source: DEFAULT_CONTENT_DIR.to_string(),
       cache_dir:   cache_dir,
       store_dir:   store_dir,
       convert_in:  String::new(),
@@ -109,7 +109,7 @@ impl Config {
     config.push(format!("mode: {}",self.mode));
     config.push(format!("name: {}",self.name));
     config.push(format!("listen_addr: {}",self.listen_addr));
-    config.push(format!("content_dir: {}",self.content_dir));
+    config.push(format!("source: {}",self.source));
     config.push(format!("cache_dir: {}",self.cache_dir));
     config.push(format!("store_dir: {}",self.store_dir));
     config.push(format!("convert_in: {}",self.convert_in));
@@ -137,7 +137,7 @@ impl Config {
         };
         config.name = util::prompt(format!("Server fully qualified domain name: (default: {})",DEFAULT_SERVER_NAME),DEFAULT_SERVER_NAME.to_string());
         config.listen_addr = util::prompt(format!("Server listening address: (default: {})",config.listen_addr),config.listen_addr);
-        config.content_dir = util::prompt(format!("Content directory: (default: {})",config.content_dir),config.content_dir);
+        config.source = util::prompt(format!("Content directory: (default: {})",config.source),config.source);
         config.cache_dir = match dirs::cache_dir() {
           Some(cache) => {
             format!("{}/{}/server",cache.display().to_string(),BUILD_NAME)
@@ -252,7 +252,7 @@ impl Config {
           },
           "name"        => config.name = value.clone(),
           "listen_addr" => config.listen_addr = value.clone(),
-          "content_dir" => config.content_dir = value.clone(),
+          "source" => config.source = value.clone(),
           "cache_dir"   => config.cache_dir = value.clone(),
           "store_dir"   => config.store_dir = value.clone(),
           "convert_in"  => config.convert_in = value.clone(),
@@ -329,9 +329,9 @@ impl Config {
             None => {},
           }
         },
-        "--content" => {
+        "--content" | "--source" => {
           match args.next() {
-            Some(value) => config.content_dir = value,
+            Some(value) => config.source = value,
             None => {},
           }
         },
