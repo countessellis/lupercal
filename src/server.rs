@@ -13,7 +13,7 @@ use crate::request::*;
 use crate::response::*;
 use crate::store::*;
 
-///////////// Mode
+///////////// Server
 
 pub(crate) struct Server {
   pub(crate) config: Config,
