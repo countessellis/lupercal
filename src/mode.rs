@@ -6,7 +6,7 @@ use crate::util;
 
 ///////////// Mode
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Mode {
   Server,
   Client,
@@ -59,19 +59,12 @@ impl Mode {
     while let Some(arg) = args.next() {
       match arg.as_str() {
         "--mode" => match args.next() {
-          Some(mode)  => match mode.as_str() {
-            "server"  => return Mode::Server,
-            "client"  => return Mode::Client,
-            "proxy"   => return Mode::Proxy,
-            "convert" => return Mode::Convert,
-            _         => {},
+          Some(mode) => match Mode::from_str(mode.as_str()) {
+            Ok(mode) => return mode,
+            Err(_)   => return Default::default(),
           },
           None        => {},
         },
-        "--server"    => return Mode::Server,
-        "--client"    => return Mode::Client,
-        "--proxy"     => return Mode::Proxy,
-        "--convert"   => return Mode::Convert,
         _ => {},
       }
     }

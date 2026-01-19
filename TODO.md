@@ -1,7 +1,6 @@
 # TODO
 
 * Caching and checking of certs.
-* Add the proxy (this won't take much since it's essentially the client for origin pull and the server for front end).
 
 ## Possible Future:
 

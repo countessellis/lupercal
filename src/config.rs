@@ -2,6 +2,7 @@ use std::fs::{read_to_string,write};
 use std::fs;
 use std::env::{args,Args};
 use std::str::FromStr;
+use url::Url;
 
 use crate::defaults::*;
 use crate::mode::*;
@@ -13,6 +14,9 @@ pub(crate) struct Config {
   pub(crate) name: String,
   pub(crate) listen_addr: String,
   pub(crate) source: String,
+  pub(crate) proxy: String,
+  pub(crate) allow: Vec<String>,
+  pub(crate) deny: Vec<String>,
   pub(crate) cache_dir: String,
   pub(crate) store_dir: String,
   pub(crate) convert_in: String,
@@ -95,7 +99,10 @@ impl Config {
       mode:        mode.clone(),
       name:        name,
       listen_addr: DEFAULT_LISTEN_ADDR.to_string(),
-      source: DEFAULT_CONTENT_DIR.to_string(),
+      source:      DEFAULT_CONTENT_DIR.to_string(),
+      proxy:       String::new(),
+      allow:       Vec::new(),
+      deny:        Vec::new(),
       cache_dir:   cache_dir,
       store_dir:   store_dir,
       convert_in:  String::new(),
@@ -110,6 +117,9 @@ impl Config {
     config.push(format!("name: {}",self.name));
     config.push(format!("listen_addr: {}",self.listen_addr));
     config.push(format!("source: {}",self.source));
+    config.push(format!("proxy: {}",self.proxy));
+    config.push(format!("allow: {}",self.allow.join(",")));
+    config.push(format!("deny: {}",self.deny.join(",")));
     config.push(format!("cache_dir: {}",self.cache_dir));
     config.push(format!("store_dir: {}",self.store_dir));
     config.push(format!("convert_in: {}",self.convert_in));
@@ -131,13 +141,11 @@ impl Config {
     };
     match config.mode {
       Mode::Server => {
-        let name: String = match mode {
-          Mode::Server | Mode::Proxy => DEFAULT_SERVER_NAME.to_string(),
-          _                          => DEFAULT_CLIENT_NAME.to_string(),
-        };
         config.name = util::prompt(format!("Server fully qualified domain name: (default: {})",DEFAULT_SERVER_NAME),DEFAULT_SERVER_NAME.to_string());
+        config.allow.push(config.name.clone());
         config.listen_addr = util::prompt(format!("Server listening address: (default: {})",config.listen_addr),config.listen_addr);
         config.source = util::prompt(format!("Content directory: (default: {})",config.source),config.source);
+        match Url::parse(&config.source) { Ok(url) => { match url.scheme() { "gemini" | "gmi" => config.proxy = config.source.clone(), _ => {}, } }, Err(_) => {}, }
         config.cache_dir = match dirs::cache_dir() {
           Some(cache) => {
             format!("{}/{}/server",cache.display().to_string(),BUILD_NAME)
@@ -160,6 +168,17 @@ impl Config {
       Mode::Proxy => {
         config.name = util::prompt(format!("Proxy fully qualified domain name: (default: {})",DEFAULT_SERVER_NAME),DEFAULT_SERVER_NAME.to_string());
         config.listen_addr = util::prompt(format!("Proxy listening address: (default: {})",config.listen_addr),config.listen_addr);
+        if let allow = util::prompt(String::from("Allow hostname list (empty by default, comma separated, if not empty, requests not in the list won't be proxied:"),String::new()).as_str() {
+          for host in allow.split(",") {
+            config.allow.push(host.to_string());
+          }
+        }
+        if let deny = util::prompt(String::from("Deny hostname list (empty by default, comma separated, if not empty, requests in the list will not be proxied:"),String::new()).as_str() {
+          for host in deny.split(",") {
+            config.deny.push(host.to_string());
+          }
+        }
+        config.deny.push(config.name.clone());
         config.cache_dir = match dirs::cache_dir() {
           Some(cache) => {
             format!("{}/{}/proxy",cache.display().to_string(),BUILD_NAME)
@@ -181,6 +200,18 @@ impl Config {
       },
       Mode::Client => {
         config.name = util::prompt(format!("Client identifying name: (typically username@hostname or email address, default: {})",DEFAULT_CLIENT_NAME),DEFAULT_CLIENT_NAME.to_string());
+        config.proxy = util::prompt(format!("Proxy server: (a proxy server starting with gemini:// for all requests to be sent to, default: {})",DEFAULT_CLIENT_NAME),DEFAULT_CLIENT_NAME.to_string());
+        println!("The following two settings are rarely used for client, but the allow list is useful for kiosk applications, and the deny list can be used to prevent undesireable requests.");
+        if let allow = util::prompt(String::from("Allow hostname list (empty by default, comma separated, if not empty, requests not in the list will be blocked:"),String::new()).as_str() {
+          for host in allow.split(",") {
+            config.allow.push(host.to_string());
+          }
+        }
+        if let deny = util::prompt(String::from("Deny hostname list (empty by default, comma separated, if not empty, requests in the list will be blocked:"),String::new()).as_str() {
+          for host in deny.split(",") {
+            config.deny.push(host.to_string());
+          }
+        }
         config.cache_dir = match dirs::cache_dir() {
           Some(cache) => {
             format!("{}/{}/client",cache.display().to_string(),BUILD_NAME)
@@ -253,6 +284,17 @@ impl Config {
           "name"        => config.name = value.clone(),
           "listen_addr" => config.listen_addr = value.clone(),
           "source" => config.source = value.clone(),
+          "proxy" => config.proxy = value.clone(),
+          "allow" => {
+            for host in value.split(",") {
+              config.allow.push(host.to_string());
+            }
+          },
+          "deny" => {
+            for host in value.split(",") {
+              config.deny.push(host.to_string());
+            }
+          },
           "cache_dir"   => config.cache_dir = value.clone(),
           "store_dir"   => config.store_dir = value.clone(),
           "convert_in"  => config.convert_in = value.clone(),
@@ -261,6 +303,14 @@ impl Config {
           _ => {},
         };
       }
+    }
+    match config.mode {
+      Mode::Server => config.allow.push(config.name.clone()),
+      Mode::Proxy  => config.deny.push(config.name.clone()),
+      Mode::Client => if !config.proxy.is_empty() { 
+        match Url::parse(&config.proxy) { Ok(url) => { if let Some(host) = url.host_str() { config.allow.push(host.to_string()) } }, _ => {}, }
+      },
+      _ => {},
     }
     Config::from_args(&config)
   }
@@ -313,10 +363,6 @@ impl Config {
           },
           None       => {},
         },
-        "--server"   => config.mode = Mode::Server,
-        "--client"   => config.mode = Mode::Client,
-        "--proxy"    => config.mode = Mode::Proxy,
-        "--convert"  => config.mode = Mode::Convert,
         "--name" => {
           match args.next() {
             Some(value) => config.name = value,
@@ -332,6 +378,12 @@ impl Config {
         "--content" | "--source" => {
           match args.next() {
             Some(value) => config.source = value,
+            None => {},
+          }
+        },
+        "--proxy" => {
+          match args.next() {
+            Some(value) => config.proxy = value,
             None => {},
           }
         },

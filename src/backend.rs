@@ -4,6 +4,7 @@ use std::fs;
 
 use crate::client::*;
 use crate::config::*;
+use crate::mode::*;
 use crate::request::*;
 use crate::response::*;
 
@@ -13,30 +14,36 @@ use crate::response::*;
 pub(crate) enum Backend {
   File(String),
   Http(String),
-  Gemini(Client,String),
-  Proxy(Client),
+  Client(Client),
   None,
 }
 
 impl Backend {
   pub(crate) fn new(config: &Config) -> Backend {
-    match Url::parse(&config.source) {
-      Ok(url) => {
-        match url.scheme() {
-          "file" => Backend::File(config.source.clone()),
-          "http"   | "https" => Backend::Http(config.source.clone()),
-          "gemini" | "gmi"   => match Client::new(&config) {
-            Some(client) => Backend::Gemini(client,config.source.clone()),
-            None         => Backend::None,
+    match config.mode {
+      Mode::Server => {
+        match Url::parse(&config.source) {
+          Ok(url) => {
+            match url.scheme() {
+              "file" => Backend::File(config.source.clone()),
+              "http"   | "https" => Backend::Http(config.source.clone()),
+              "gemini" | "gmi"   => match Client::new(&config) {
+                Some(client) => Backend::Client(client),
+                None         => Backend::None,
+              },
+              _                  => Backend::None,
+            }
           },
-          "proxy"            => match Client::new(&config) {
-            Some(client) => Backend::Proxy(client),
-            None         => Backend::None,
-          },
-          _                  => Backend::None,
+          Err(_) => Backend::File(config.source.clone()),
         }
       },
-      Err(_) => Backend::File(config.source.clone()),
+      Mode::Proxy => {
+        match Client::new(&config) {
+          Some(client) => Backend::Client(client),
+          None         => Backend::None,
+        }
+      },
+      _ => Backend::None,
     }
   }
 
@@ -45,6 +52,19 @@ impl Backend {
       Backend::File(source) => {
         match request.as_url() {
           Some(url) => {
+            match url.host_str() {
+              Some(host) => {
+                if !request.config.allow.is_empty() && !request.config.allow.contains(&host.to_string()) {
+                  return Response::new(&ResponseCode::FailPermProxy,&String::from("Proxy Not Allowed"),&Vec::new(),&None)
+                }
+                if !request.config.deny.is_empty() && request.config.deny.contains(&host.to_string()) {
+                  return Response::new(&ResponseCode::FailPermProxy,&String::from("Proxy Not Allowed"),&Vec::new(),&None)
+                }
+              },
+              None => {
+                return Response::new(&ResponseCode::FailBadReq,&String::from("Bad Request"),&Vec::new(),&None)
+              },
+            }
             let mut file: String = format!("{}{}",source,url.path());
             if file.ends_with("/") { file.truncate(file.len()-1); }
             let path = Path::new(&file);
@@ -76,11 +96,11 @@ impl Backend {
               },
               Ok(false) => {
                 log::error!("File {} does not exist.",file);
-                Response::new(&ResponseCode::FailNotFound,&format!("{} not found",url.path()),&Vec::new(),&Some(request.clone()))
+                return Response::new(&ResponseCode::FailNotFound,&format!("{} not found",url.path()),&Vec::new(),&Some(request.clone()))
               },
               Err(err) => {
                 log::error!("Error testing if {} exists: {}",file,err);
-                Response::new(&ResponseCode::Fail,&String::from("Server Failure"),&Vec::new(),&Some(request.clone()))
+                return Response::new(&ResponseCode::Fail,&String::from("Server Failure"),&Vec::new(),&Some(request.clone()))
               }
             }
           },
@@ -88,6 +108,12 @@ impl Backend {
             log::error!("Failed to parse uri from request.");
             return Response::new(&ResponseCode::FailBadReq,&String::from("Invalid URI"),&Vec::new(),&Some(request.clone()))
           },
+        }
+      },
+      Backend::Client(client) => {
+        match client.request(&request) {
+          Some(response) => return response,
+          None           => return Response::new(&ResponseCode::FailProxy,&String::from("Proxy Error"),&Vec::new(),&Some(request.clone())),
         }
       },
       _ => {

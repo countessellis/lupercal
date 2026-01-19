@@ -20,6 +20,7 @@ use openssl::ssl::ErrorCode;
 
 use crate::config::*;
 use crate::defaults::*;
+use crate::mode::*;
 use crate::response::*;
 use crate::request::*;
 use crate::splash;
@@ -45,8 +46,7 @@ impl Client {
     match Store::new(&config) {
       Ok(store) => {
         log::info!("Key store created successfully.");
-        log::info!("Starting listener...");
-        Self::splash();
+        if config.mode == Mode::Client { Self::splash(); }
         Some(Client { config: config.clone(), keys: store.clone() })
       },
       Err(err)    => {
@@ -60,15 +60,32 @@ impl Client {
     match request.as_url() {
       Some(url) => {
         log::info!("Making request for: {}",request.next);
-        match url.host_str() {
-          Some(host) => {
+        match url.host_str().map(|host| host.to_string()) {
+          Some(mut host) => {
+            match self.config.mode {
+              Mode::Proxy => {
+                if !self.config.allow.is_empty() && !self.config.allow.contains(&host.to_string()) {
+                  return Some(Response::new(&ResponseCode::FailPerm,&String::from("Host Not Allowed"),&Vec::new(),&None))
+                }
+                if !self.config.deny.is_empty() && self.config.deny.contains(&host.to_string()) {
+                  return Some(Response::new(&ResponseCode::FailPerm,&String::from("Host Not Allowed"),&Vec::new(),&None))
+                }
+              },
+              _ => {
+                if !self.config.proxy.is_empty() {
+                  host = self.config.proxy.clone();
+                };
+                if !self.config.allow.is_empty() && !self.config.allow.contains(&host.to_string()) { return None }
+                if !self.config.deny.is_empty() && self.config.deny.contains(&host.to_string()) { return None }
+              },
+            }
             match TcpStream::connect(format!("{}:{}",host,DEFAULT_LISTEN_PORT)) {
               Ok(connection) => {
                 match SslConnector::builder(SslMethod::tls()) {
                   Ok(mut builder) => {
                     builder.set_verify(SslVerifyMode::NONE);
                     let connector: SslConnector = builder.build();
-                    match connector.connect(host, &connection) {
+                    match connector.connect(&host, &connection) {
                       Ok(mut tunnel) => {
                         match tunnel.ssl_write(&request.as_bytes()) {
                           Ok(_) => {
