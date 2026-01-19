@@ -1,8 +1,6 @@
-# Lupercal
+# Lupercal Usage
 
-A simple Gemini server and client written in Rust
-
-## Usage
+=> index.gmi Home
 
 All modes can be ran from the lupercal binary, which defaults to client if no mode it specified.
 
@@ -10,7 +8,7 @@ lupercal --mode [server|client|proxy|convert] [options] [url]
 
 Use the options below depending on which mode Lupercal is ran as:
 
-### Client
+## Client
 
 In client mode, Lupercal runs as a client to request content from gemini servers.
 
@@ -31,7 +29,7 @@ lupercal-client [options] url
     --lock                              Lock the private key, requiring passprase on future runs.
     --unlock                            Unlock the private key, to not require passprase on future runs (warning, insecure mode).
 
-### Server
+## Server
 
 In server mode, Lupercal runs as a gemini server.
 
@@ -48,7 +46,7 @@ lupercal-server [options]
     --lock                              Lock the private key, requiring passprase on future runs.
     --unlock                            Unlock the private key, to not require passprase on future runs (warning, insecure mode).
 
-### Proxy
+## Proxy
 
 lupercal --mode proxy [options]
 lupercal-proxy [options]
@@ -63,7 +61,7 @@ lupercal-proxy [options]
     --lock                              Lock the private key, requiring passprase on future runs.
     --unlock                            Unlock the private key, to not require passprase on future runs (warning, insecure mode).
 
-### Convert
+## Convert
 
 Convert a gemini capsule to a simple HTML website.
 
