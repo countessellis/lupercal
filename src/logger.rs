@@ -16,46 +16,57 @@ pub fn init() {
     },
     Err(_)    => DEFAULT_LOG_LEVEL,
   };
-  let loglevel = tracing_subscriber::filter::LevelFilter::from_str(&loglevel.to_string()).unwrap_or(tracing_subscriber::filter::LevelFilter::INFO);
-  let logformat = fmt::layer().with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET);
-  let timeformat = {
-    let layer = fmt::layer();
-    match DEFAULT_LOG_FORMAT_TIMESTAMP {
-      Some(format) => match format {
-        TimestampPrecision::Millis => {
-          let timer = UtcTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]"));
-          fmt::layer().with_timer(timer).boxed()
-        },
-        TimestampPrecision::Micros => {
-          let timer = UtcTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:6]"));
-          fmt::layer().with_timer(timer).boxed()
-        },
-        TimestampPrecision::Nanos => {
-          let timer = UtcTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:9]"));
-          fmt::layer().with_timer(timer).boxed()
-        },
-        _ => layer.boxed(),
-      },
-      None => layer.without_time().boxed(),
-    }
-  };
-  let tui_layer = tui_logger::TuiTracingSubscriberLayer;
-  let registry = Registry::default().with(tui_layer).with(loglevel).with(timeformat).with(logformat);
+
   #[cfg(debug_assertions)]
   {
-    match DEFAULT_LOG_TARGET {
-      env_logger::fmt::Target::Stdout => {
-        let stdout_layer = fmt::layer().with_writer(std::io::stdout);
-        registry.with(stdout_layer).init();
+
+    let filter_layer = tracing_subscriber::filter::LevelFilter::from_str(&loglevel.to_string()).unwrap_or(tracing_subscriber::filter::LevelFilter::INFO);
+    let fmt_layer = match DEFAULT_LOG_FORMAT_TIMESTAMP {
+      Some(TimestampPrecision::Seconds) => {
+        let timer = UtcTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"));
+        match DEFAULT_LOG_TARGET {
+          env_logger::fmt::Target::Stdout => fmt::layer().with_timer(timer).with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stdout).boxed(),
+          _ => fmt::layer().with_timer(timer).with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stderr).boxed(),
+        }
       },
-      __                               => {
-        let stderr_layer = fmt::layer().with_writer(std::io::stderr);
-        registry.with(stderr_layer).init();
+      Some(TimestampPrecision::Millis) => {
+        let timer = UtcTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]"));
+        match DEFAULT_LOG_TARGET {
+          env_logger::fmt::Target::Stdout => fmt::layer().with_timer(timer).with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stdout).boxed(),
+          _ => fmt::layer().with_timer(timer).with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stderr).boxed(),
+        }
       },
-    }
+      Some(TimestampPrecision::Micros) => {
+        let timer = UtcTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:6]"));
+        match DEFAULT_LOG_TARGET {
+          env_logger::fmt::Target::Stdout => fmt::layer().with_timer(timer).with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stdout).boxed(),
+          _ => fmt::layer().with_timer(timer).with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stderr).boxed(),
+        }
+      },
+      Some(TimestampPrecision::Nanos) => {
+        let timer = UtcTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:9]"));
+        match DEFAULT_LOG_TARGET {
+          env_logger::fmt::Target::Stdout => fmt::layer().with_timer(timer).with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stdout).boxed(),
+          _ => fmt::layer().with_timer(timer).with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stderr).boxed(),
+        }
+      },
+      None                            => {
+        match DEFAULT_LOG_TARGET {
+          env_logger::fmt::Target::Stdout => fmt::layer().without_time().with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stdout).boxed(),
+          _ => fmt::layer().without_time().with_level(DEFAULT_LOG_FORMAT_LEVEL).with_target(DEFAULT_LOG_FORMAT_TARGET).with_writer(std::io::stderr).boxed(),
+        }
+      },
+    };
+    let tui_layer = tui_logger::TuiTracingSubscriberLayer;
+    let registry = Registry::default().with(tui_layer).with(filter_layer).with(fmt_layer).init();
   }
+
   #[cfg(not(debug_assertions))]
   {
+    let filter_layer = tracing_subscriber::filter::LevelFilter::from_str(&loglevel.to_string()).unwrap_or(tracing_subscriber::filter::LevelFilter::INFO);
+    let fmt_layer = fmt::layer().with_filter(loglevel);
+    let tui_layer = tui_logger::TuiTracingSubscriberLayer;
+    let registry = Registry::default().with(tui_layer).with(filter_level).with(fmt_layer).init();
     if std::env::var("JOURNAL_STREAM").is_ok() {
         match tracing_journald::layer() {
           Ok(journal_layer) => {
