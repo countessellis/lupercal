@@ -16,19 +16,19 @@ path = "src/main.rs"
 
 [[bin]]
 name = "lupercal-server"
-path = "src/main.rs"
+path = "src/bin/server.rs"
 
 [[bin]]
 name = "lupercal-client"
-path = "src/main.rs"
+path = "src/bin/client.rs"
 
 [[bin]]
 name = "lupercal-proxy"
-path = "src/main.rs"
+path = "src/bin/proxy.rs"
 
 [[bin]]
 name = "lupercal-convert"
-path = "src/main.rs"
+path = "src/bin/convert.rs"
 
 [lib]
 name = "lupercal"
