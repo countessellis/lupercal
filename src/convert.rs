@@ -1,13 +1,8 @@
-use std::fs;
-use std::path::Path;
-use std::io::BufReader;
-use std::fs::File;
-use std::io::BufRead;
-use std::ffi::OsStr;
+use std::{ffi::OsStr,fs,fs::File,io::{BufRead,BufReader,ErrorKind},path::Path};
 use walkdir::WalkDir;
-use std::io::ErrorKind;
 
 use crate::config::*;
+
 use crate::util;
 
 ///////////// Convert
@@ -62,7 +57,7 @@ impl Convert {
                   Err(err) => log::error!("Failed to create directory {}: {}",target.display(),err),
                 }
               } else {
-                if let Some(parent) = target.parent() {
+                if target.parent().is_some() {
                   match fs::create_dir_all(&target) {
                     Ok(_)    => log::info!("Created directory {}.",target.display()),
                     Err(err) if err.kind() == ErrorKind::AlreadyExists => log::info!("Directory {} already exists, skipping.",target.display()),

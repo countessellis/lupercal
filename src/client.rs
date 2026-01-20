@@ -1,33 +1,30 @@
-use openssl::ssl::SslMethod;
-use url::Url;
-use std::net::TcpStream;
-use openssl::ssl::{SslConnector,SslVerifyMode};
-use std::time::Duration;
+use gag::Hold;
+use openssl::{
+  ssl::{ErrorCode,SslConnector,SslMethod,SslVerifyMode},
+  x509::X509VerifyResult,
+  pkey::PKey,
+};
 use ratatui::{
   crossterm::event::{self, Event, KeyCode, KeyEventKind},
   crossterm::terminal,
+  prelude::*,
+  text::Line,
+  style::{Style,Modifier},
   widgets::*,
 };
-use ratatui::text::Line;
-use ratatui::style::Style;
-use ratatui::style::Modifier;
-use ratatui::prelude::*;
-use tui_logger::{TuiLoggerWidget,TuiWidgetState};
-use std::thread;
+use std::{net::TcpStream,thread,time::Duration};
 use textwrap::wrap;
-use gag::Hold;
-use openssl::ssl::ErrorCode;
-use openssl::hash::MessageDigest;
-use openssl::x509::X509VerifyResult;
-use openssl::pkey::PKey;
+use tui_logger::{TuiLoggerWidget,TuiWidgetState};
+use url::Url;
 
 use crate::config::*;
 use crate::defaults::*;
 use crate::mode::*;
 use crate::response::*;
 use crate::request::*;
-use crate::splash;
 use crate::store::*;
+
+use crate::splash;
 use crate::util;
 
 ///////////// Client
@@ -227,7 +224,7 @@ impl Client {
   }
 
   pub(crate) fn tui(&self, response: &Response) {
-    let mut request: Option<Request> = None;
+    let mut request: Option<Request>;
     let mut response: Response = response.clone();
     let mut terminal = ratatui::init();
     let hold: Option<Hold> = match Hold::stderr() {
@@ -239,8 +236,8 @@ impl Client {
     let mut line_count: usize = 0;
     let mut link_count: usize = 0;
     let mut page_len: usize = 0;
+    let mut page_wid: usize = 0;
     let mut max_width: usize = 0;
-    let mut max_hori_scroll: usize = 0;
     let mut vert_scroll_state: ScrollbarState  = Default::default();
     let mut hori_scroll_state: ScrollbarState  = Default::default();
     let logger_state = TuiWidgetState::new().set_default_display_level(TUI_LOG_LEVEL);
@@ -273,11 +270,11 @@ impl Client {
                     line_count = lines.len();
                     link_count = links.len();
                     max_width = lines.iter().map(|line| line.width()).max().unwrap_or(0);
-                    max_hori_scroll = max_width.saturating_sub(main_area.width as usize).saturating_add(10);
                     let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((vert_scroll_pos as u16,hori_scroll_pos as u16)).block(block);
-                    vert_scroll_state.content_length(line_count).position(vert_scroll_pos);
-                    hori_scroll_state.content_length(max_width).position(hori_scroll_pos);
                     page_len = main_area.height as usize - 1;
+                    page_wid = main_area.width as usize - 1;
+                    vert_scroll_state = vert_scroll_state.content_length(line_count+6-page_len).position(vert_scroll_pos);
+                    hori_scroll_state = hori_scroll_state.content_length(max_width+13-page_wid).position(hori_scroll_pos);
                     frame.render_widget(&paragraph,main_area);
                     frame.render_stateful_widget(
                       Scrollbar::new(ScrollbarOrientation::VerticalRight),
@@ -287,7 +284,7 @@ impl Client {
                     frame.render_stateful_widget(
                       Scrollbar::new(ScrollbarOrientation::HorizontalBottom),
                       main_area.inner(Margin { vertical: 0, horizontal: 1 }),
-                      &mut vert_scroll_state,
+                      &mut hori_scroll_state,
                     );
                     let log_widget = TuiLoggerWidget::default()
                       .block(Block::bordered().title("Log"))
@@ -305,7 +302,8 @@ impl Client {
                       break;
                     },
                   }
-                  let max_vert_scroll: usize = if line_count+2 < page_len { 0 } else { line_count+2-page_len };
+                  let max_vert_scroll: usize = if line_count+2 < page_len { 0 } else { line_count+4-page_len };
+                  let max_hori_scroll: usize = if max_width.saturating_add(2) < page_wid { 0 } else { max_width.saturating_sub(page_wid).saturating_add(10) };
                   tui_logger::move_events();
                   match event::poll(Duration::from_millis(250)) {
                     Ok(b) => if b {
@@ -314,7 +312,6 @@ impl Client {
                           match key.code {
                             KeyCode::Char(c) if c.to_digit(10).is_some() => {
                               let mut link_number: Vec<char> = Vec::new();
-                              let index: usize = c.to_digit(10).unwrap() as usize;
                               link_number.push(c);
                               loop {
                                 match event::poll(Duration::from_millis(250)) {
@@ -389,35 +386,35 @@ impl Client {
                             },
                             KeyCode::Enter | KeyCode::Down | KeyCode::Char('j') => {
                               vert_scroll_pos = vert_scroll_pos.saturating_add(1).min(max_vert_scroll);
-                              vert_scroll_state.position(vert_scroll_pos);
+                              vert_scroll_state = vert_scroll_state.position(vert_scroll_pos);
                             },
                             KeyCode::Up | KeyCode::Char('k') => {
                               vert_scroll_pos = vert_scroll_pos.saturating_sub(1);
-                              vert_scroll_state.position(vert_scroll_pos);
+                              vert_scroll_state = vert_scroll_state.position(vert_scroll_pos);
                             },
                             KeyCode::Char(' ') | KeyCode::PageDown | KeyCode::Char('v') => {
                               vert_scroll_pos = vert_scroll_pos.saturating_add(page_len).min(max_vert_scroll);
-                              vert_scroll_state.position(vert_scroll_pos);
+                              vert_scroll_state = vert_scroll_state.position(vert_scroll_pos);
                             },
                             KeyCode::PageUp | KeyCode::Char('b') => {
                               vert_scroll_pos = vert_scroll_pos.saturating_sub(page_len);
-                              vert_scroll_state.position(vert_scroll_pos);
+                              vert_scroll_state = vert_scroll_state.position(vert_scroll_pos);
                             },
                             KeyCode::Home | KeyCode::Char('g') => {
                               vert_scroll_pos = 0;
-                              vert_scroll_state.position(vert_scroll_pos);
+                              vert_scroll_state = vert_scroll_state.position(vert_scroll_pos);
                             },
                             KeyCode::End | KeyCode::Char('G') => {
                               vert_scroll_pos = max_vert_scroll;
-                              vert_scroll_state.position(vert_scroll_pos);
+                              vert_scroll_state = vert_scroll_state.position(vert_scroll_pos);
                             },
                             KeyCode::Right => {
                               hori_scroll_pos = hori_scroll_pos.saturating_add(1).min(max_hori_scroll);
-                              hori_scroll_state.position(hori_scroll_pos);
+                              hori_scroll_state = hori_scroll_state.position(hori_scroll_pos);
                             },
                             KeyCode::Left => {
                               hori_scroll_pos = hori_scroll_pos.saturating_sub(1);
-                              hori_scroll_state.position(hori_scroll_pos);
+                              hori_scroll_state = hori_scroll_state.position(hori_scroll_pos);
                             },
                             KeyCode::Char('s') => {
                               match response.save(&self.config) {

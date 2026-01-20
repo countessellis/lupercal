@@ -1,5 +1,5 @@
-use log::LevelFilter;
 use env_logger::TimestampPrecision;
+use log::LevelFilter;
 
 pub(crate) const APP_NAME:    &str = "Lupercal";
 pub(crate) const BUILD_NAME:  &str = env!("BUILD_NAME");
@@ -19,7 +19,6 @@ pub(crate) const DEFAULT_LISTEN_ADDR: &str      = "0.0.0.0";
 pub(crate) const DEFAULT_LISTEN_PORT: &str      = "1965";
 pub(crate) const DEFAULT_SERVER_NAME: &str      = "localhost.localdomain";
 pub(crate) const DEFAULT_CLIENT_NAME: &str      = "username@localhost.localdomain";
-pub(crate) const DEFAULT_PROXY_NAME: &str       = "localhost.localdomain";
 pub(crate) const DEFAULT_CONTENT_DIR: &str      = "content";
 pub(crate) const DEFAULT_SERVER_CACHE_DIR: &str = "cache/server";
 pub(crate) const DEFAULT_CLIENT_CACHE_DIR: &str = "cache/client";

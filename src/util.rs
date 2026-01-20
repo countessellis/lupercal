@@ -1,14 +1,16 @@
-use std::io::{Write,stdout,stdin};
-use std::fs;
+use std::{
+  env,
+  fs,
+  io::{Write,stdout,stdin},
+  path::Path,
+};
 use url::Url;
-use std::path::Path;
-use std::env;
 
 use crate::defaults::*;
 
 pub(crate) fn prompt(prompt: String, default: String) -> String {
   print!("{} ",prompt);
-  stdout().flush().expect("Oups");
+  stdout().flush().ok();
   let mut response = String::new();
   let _ = stdin().read_line(&mut response);
   if response.trim().is_empty() { response = default };

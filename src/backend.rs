@@ -1,6 +1,5 @@
+use std::{path::Path,fs};
 use url::Url;
-use std::path::Path;
-use std::fs;
 
 use crate::client::*;
 use crate::config::*;
@@ -116,6 +115,10 @@ impl Backend {
           None           => return Response::new(&ResponseCode::FailProxy,&String::from("Proxy Error"),&Vec::new(),&Some(request.clone())),
         }
       },
+      Backend::Http(source) => {
+        log::error!("{}: HTTP and HTTP backends are not yet supported.",source);
+        return Response::new(&ResponseCode::Fail,&String::from("Server Error"),&Vec::new(),&Some(request.clone()))
+      }
       _ => {
         log::error!("Unsupported backend.");
         return Response::new(&ResponseCode::Fail,&String::from("Server Error"),&Vec::new(),&Some(request.clone()))

@@ -1,22 +1,25 @@
-use std::fmt;
-use std::collections::HashMap;
-use openssl::x509::{X509,X509Name};
-use openssl::rsa::Rsa;
-use openssl::pkey::{PKey,Private};
-use openssl::error::ErrorStack;
-use openssl::asn1::Asn1Time;
-use openssl::hash::MessageDigest;
-use openssl::symm::Cipher;
+use openssl::{
+  asn1::Asn1Time,
+  error::ErrorStack,
+  hash::MessageDigest,
+  pkey::{PKey,Private},
+  rsa::Rsa,
+  symm::Cipher,
+  x509::{X509,X509Name},
+};
 use rpassword::prompt_password;
-use std::fs;
-use std::fs::File;
-use std::io::Write;
-use std::env::{args,Args};
-use std::path::Path;
+use std::{
+  collections::HashMap,
+  env::{args,Args},
+  fmt,
+  fs,
+  fs::File,
+  io::Write,
+  path::Path,
+};
 
 use crate::config::*;
-use crate::defaults::DEFAULT_KEY_SIZE;
-use crate::mode::*;
+use crate::defaults::*;
 
 ///////////// Store
 

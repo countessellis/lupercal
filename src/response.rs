@@ -1,10 +1,7 @@
-use std::fmt;
-use std::fs;
+use std::{fmt,fs,path::Path};
 use url::Url;
-use std::path::Path;
 
 use crate::config::*;
-use crate::mode::*;
 use crate::request::*;
 
 ///////////// Response

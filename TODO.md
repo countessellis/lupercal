@@ -2,9 +2,6 @@
 
 ## To finish up v1.0.0:
 
-- Clean up unused variable, unnecessary mut's, and unused use statements.
-- Reorganize use statement to make them cleaner.
-- Remove unused crates from Cargo.toml.
 - Move test index.gmi to be sample.gmi and build a main imdex.gmi in the included capsule, then fill in more of the documentation I want in both README and capsule.
 - Move key and cert files for server/client out of store and into config directory.
 - Fix bug where client hangs when proxy fails, not sure of this is client side proxy side, but doesn't happen direct without proxy.

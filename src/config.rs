@@ -1,5 +1,5 @@
-use std::fs::{read_to_string,write};
 use std::fs;
+use std::fs::{read_to_string,write};
 use std::env::{args,Args};
 use std::str::FromStr;
 use url::Url;
@@ -168,15 +168,13 @@ impl Config {
       Mode::Proxy => {
         config.name = util::prompt(format!("Proxy fully qualified domain name: (default: {})",DEFAULT_SERVER_NAME),DEFAULT_SERVER_NAME.to_string());
         config.listen_addr = util::prompt(format!("Proxy listening address: (default: {})",config.listen_addr),config.listen_addr);
-        if let allow = util::prompt(String::from("Allow hostname list (empty by default, comma separated, if not empty, requests not in the list won't be proxied:"),String::new()).as_str() {
-          for host in allow.split(",") {
-            config.allow.push(host.to_string());
-          }
+        let allow: String = util::prompt(String::from("Allow hostname list (empty by default, comma separated, if not empty, requests not in the list won't be proxied:"),String::new());
+        for host in allow.split(",") {
+          config.allow.push(host.to_string());
         }
-        if let deny = util::prompt(String::from("Deny hostname list (empty by default, comma separated, if not empty, requests in the list will not be proxied:"),String::new()).as_str() {
-          for host in deny.split(",") {
-            config.deny.push(host.to_string());
-          }
+        let deny: String = util::prompt(String::from("Deny hostname list (empty by default, comma separated, if not empty, requests in the list will not be proxied:"),String::new());
+        for host in deny.split(",") {
+          config.deny.push(host.to_string());
         }
         config.deny.push(config.name.clone());
         config.cache_dir = match dirs::cache_dir() {
@@ -202,15 +200,13 @@ impl Config {
         config.name = util::prompt(format!("Client identifying name: (typically username@hostname or email address, default: {})",DEFAULT_CLIENT_NAME),DEFAULT_CLIENT_NAME.to_string());
         config.proxy = util::prompt(format!("Proxy server: (a proxy server starting with gemini:// for all requests to be sent to, default: {})",DEFAULT_CLIENT_NAME),DEFAULT_CLIENT_NAME.to_string());
         println!("The following two settings are rarely used for client, but the allow list is useful for kiosk applications, and the deny list can be used to prevent undesireable requests.");
-        if let allow = util::prompt(String::from("Allow hostname list (empty by default, comma separated, if not empty, requests not in the list will be blocked:"),String::new()).as_str() {
-          for host in allow.split(",") {
-            config.allow.push(host.to_string());
-          }
+        let allow: String = util::prompt(String::from("Allow hostname list (empty by default, comma separated, if not empty, requests not in the list will be blocked:"),String::new());
+        for host in allow.split(",") {
+          config.allow.push(host.to_string());
         }
-        if let deny = util::prompt(String::from("Deny hostname list (empty by default, comma separated, if not empty, requests in the list will be blocked:"),String::new()).as_str() {
-          for host in deny.split(",") {
-            config.deny.push(host.to_string());
-          }
+        let deny: String = util::prompt(String::from("Deny hostname list (empty by default, comma separated, if not empty, requests in the list will be blocked:"),String::new());
+        for host in deny.split(",") {
+          config.deny.push(host.to_string());
         }
         config.cache_dir = match dirs::cache_dir() {
           Some(cache) => {
@@ -265,11 +261,13 @@ impl Config {
         }
       }
     };
-    let lines: Vec<String> = read_to_string(config_file)
-      .unwrap()
-      .lines()
-      .map(String::from)
-      .collect();
+    let lines: Vec<String> = match read_to_string(config_file) {
+      Ok(lines) => lines,
+      Err(err)  => {
+        log::error!("Failed to read from config file, using defaults: {}",err);
+        String::new()
+      },
+    }.lines().map(String::from).collect();
     let mut config = Config::defaults(&mode);
     for line in lines {
       let pair: Vec<&str> = line.split(":").collect();

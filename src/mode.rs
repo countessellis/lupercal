@@ -1,6 +1,4 @@
-use std::env::{args,Args};
-use std::str::FromStr;
-use std::fmt;
+use std::{env::{args,Args},fmt,str::FromStr};
 
 use crate::util;
 

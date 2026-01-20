@@ -1,14 +1,9 @@
-use std::net::TcpListener;
-use std::thread;
-use openssl::ssl::{SslAcceptor,SslMethod};
-use openssl::pkey::PKey;
-use std::io::ErrorKind;
-use std::io::Write;
-use std::fs;
-use std::path::Path;
-use openssl::ssl::NameType;
-use openssl::hash::MessageDigest;
-use openssl::ssl::SslVerifyMode;
+use openssl::{
+  hash::MessageDigest,
+  pkey::PKey,
+  ssl::{NameType,SslAcceptor,SslMethod,SslVerifyMode},
+};
+use std::{net::TcpListener,thread,io::ErrorKind,io::Write};
 
 use crate::backend::*;
 use crate::config::*;
