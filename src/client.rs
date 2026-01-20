@@ -273,8 +273,8 @@ impl Client {
                     let paragraph: Paragraph = Paragraph::new(lines.clone()).scroll((vert_scroll_pos as u16,hori_scroll_pos as u16)).block(block);
                     page_len = main_area.height as usize - 1;
                     page_wid = main_area.width as usize - 1;
-                    vert_scroll_state = vert_scroll_state.content_length(line_count+6-page_len).position(vert_scroll_pos);
-                    hori_scroll_state = hori_scroll_state.content_length(max_width+13-page_wid).position(hori_scroll_pos);
+                    vert_scroll_state = vert_scroll_state.content_length(line_count.saturating_add(6).saturating_sub(page_len)).position(vert_scroll_pos);
+                    hori_scroll_state = hori_scroll_state.content_length(max_width.saturating_add(13).saturating_sub(page_wid)).position(hori_scroll_pos);
                     frame.render_widget(&paragraph,main_area);
                     frame.render_stateful_widget(
                       Scrollbar::new(ScrollbarOrientation::VerticalRight),
