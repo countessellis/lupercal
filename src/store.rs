@@ -85,7 +85,7 @@ impl Store {
                               Ok(pem)  =>  {
                                 match X509::from_pem(&pem) {
                                   Ok(cert)  => {
-                                     log::info!("Found cert {} on disk, loading...",id);
+                                     log::debug!("Found cert {} on disk, loading...",id);
                                      self.cache.insert(id.clone(),cert.clone());
                                   },
                                   Err(err) => log::error!("Failed to parse cert {} from disk: {}",id,err),
@@ -146,9 +146,9 @@ impl Store {
             return false
           },
         });
-        log::info!("Found cert in cache for {} with fingerprint {}",id,cached_fingerprint);
+        log::debug!("Found cert in cache for {} with fingerprint {}",id,cached_fingerprint);
         if fingerprint == cached_fingerprint {
-          log::info!("Fingerprint for {} matched previous fingerprint {}.",id,fingerprint);
+          log::debug!("Fingerprint for {} matched previous fingerprint {}.",id,fingerprint);
           return true
         } else {
           log::error!("Fingerprint {} for {} doesn't match last connection.",fingerprint,id);
@@ -228,7 +228,7 @@ impl Keys {
               Ok(key)  => Some(key),
               Err(err) => {
                 log::error!("Failed to read unlocked key {}: {}",pkey_locked,err);
-                Self::gen_key(&config)
+                None
               },
             }
           },
