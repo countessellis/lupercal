@@ -6,6 +6,9 @@ use std::io::ErrorKind;
 use std::io::Write;
 use std::fs;
 use std::path::Path;
+use openssl::ssl::NameType;
+use openssl::hash::MessageDigest;
+use openssl::ssl::SslVerifyMode;
 
 use crate::backend::*;
 use crate::config::*;
@@ -68,12 +71,32 @@ impl Server {
         Ok(incoming) => {
           thread::spawn({
             let config: Config = self.config.clone();
-            let keys: Store = self.keys.clone();
+            let mut keys: Store = self.keys.clone();
             let backend: Backend = self.backend.clone();
             move || {
               match SslAcceptor::mozilla_modern_v5(SslMethod::tls_server()) {
                 Ok(mut builder) => {
+                  let allow = config.allow.clone();
+                  let deny = config.deny.clone();
+                  builder.set_servername_callback(move |ssl, _alerts| {
+                    let requested_name = ssl.servername(NameType::HOST_NAME);
+                    match requested_name {
+                      Some(name) => {
+                        if allow.contains(&name.to_string()) {
+                          Ok(())
+                        } else if !deny.contains(&name.to_string()) {
+                          Err(openssl::ssl::SniError::ALERT_FATAL)
+                        } else {
+                          Ok(())
+                        }
+                      },
+                      None => Err(openssl::ssl::SniError::ALERT_FATAL),
+                    }
+                  });
                   builder.set_private_key(&PKey::from_rsa(keys.keys.keypair.clone()).unwrap()).unwrap();
+                  builder.set_verify(SslVerifyMode::PEER);
+                  builder.set_verify_callback(SslVerifyMode::PEER, |_, _| true);
+                  builder.set_session_id_context(BUILD_NAME.as_bytes()).unwrap();
                   match builder.set_certificate(&keys.keys.cert.clone()) {
                     Ok(()) => {},
                     Err(err) => {
@@ -85,6 +108,23 @@ impl Server {
                   let mut buffer: [u8;1024] = [0;1024];
                   match acceptor.accept(incoming) {
                     Ok(mut stream) => {
+                      match stream.ssl().peer_certificate().or_else(|| { stream.ssl().peer_cert_chain() .and_then(|chain| chain.get(0).map(|c| c.to_owned())) }) {
+                        Some(cert) => {
+                          let fingerprint: String = match cert.digest(MessageDigest::sha1()) {
+                            Ok(fingerprint) => hex::encode(fingerprint),
+                            Err(err) => {
+                              log::error!("Unable to retrieve fingerprint from cert: {}",err);
+                              String::new()
+                            },
+                          };
+                          if !fingerprint.is_empty() {
+                             keys.verify(&fingerprint,&cert);
+                          }
+                        },
+                        None => {
+                          log::info!("No client certificate provided.");
+                        },
+                      }
                       let response: Response = match stream.ssl_read(&mut buffer) {
                         Ok(len) => {
                           match Request::from_bytes(&config,&buffer) {

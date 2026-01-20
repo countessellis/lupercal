@@ -1,6 +1,6 @@
 # TODO
 
-* Caching and checking of certs.
+Nothing right now.
 
 ## Possible Future:
 

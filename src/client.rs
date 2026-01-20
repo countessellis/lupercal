@@ -17,6 +17,9 @@ use std::thread;
 use textwrap::wrap;
 use gag::Hold;
 use openssl::ssl::ErrorCode;
+use openssl::hash::MessageDigest;
+use openssl::x509::X509VerifyResult;
+use openssl::pkey::PKey;
 
 use crate::config::*;
 use crate::defaults::*;
@@ -83,12 +86,53 @@ impl Client {
               Ok(connection) => {
                 match SslConnector::builder(SslMethod::tls()) {
                   Ok(mut builder) => {
-                    builder.set_verify(SslVerifyMode::NONE);
+                    builder.set_verify(SslVerifyMode::PEER);
+                    match PKey::from_rsa(self.keys.keys.keypair.clone()) {
+                      Ok(pkey) => {
+                        log::info!("Initializing client certificate for connection.");
+                        if let Err(err) = builder.set_certificate(&self.keys.keys.cert) {
+                          log::error!("Failed to set certificate: {}",err);
+                        } else if let Err(err) = builder.set_private_key(&pkey) {
+                          log::error!("Failed to set private: {}",err);
+                        } else {
+                          log::info!("Certificate and key set.");
+                        }
+                      },
+                      Err(err) => {
+                        log::error!("Failed to prepair key, proceeding without client certificate: {}",err);
+                      },
+                    }
+                    let cache = self.keys.clone();
+                    let remote = host.clone();
+                    builder.set_verify_callback(SslVerifyMode::PEER, move |_preverify_ok, context| {
+                      if context.error_depth() == 0 {
+                        let mut cache = cache.clone();
+                        let cert = context.current_cert();
+                        match cert {
+                          Some(cert) => {
+                            if cache.verify(&remote,&cert.to_owned()) {
+                              context.set_error(openssl::x509::X509VerifyResult::OK);
+                              return true;
+                            } else {
+                              context.set_error(X509VerifyResult::APPLICATION_VERIFICATION);
+                              return false;
+                            }
+                          },
+                          None => {
+                            log::error!("No cert provided by {}.",remote);
+                            context.set_error(X509VerifyResult::APPLICATION_VERIFICATION);
+                            return false;
+                          },
+                        }
+                      }
+                      true
+                    });
                     let connector: SslConnector = builder.build();
                     match connector.connect(&host, &connection) {
                       Ok(mut tunnel) => {
                         match tunnel.ssl_write(&request.as_bytes()) {
                           Ok(_) => {
+
                             let mut buffer: [u8;16384] = [0;16384];
                             let mut bytes: Vec<u8> = Vec::new();
                             loop {

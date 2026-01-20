@@ -1085,6 +1085,7 @@ dependencies = [
  "env_logger",
  "fs_extra",
  "gag",
+ "hex",
  "infer",
  "is-terminal",
  "log",

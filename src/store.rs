@@ -34,7 +34,7 @@ impl Store {
       Ok(()) => log::info!("Created store directory {}.",config.store_dir),
       Err(_) => log::error!("Failed to create store directory {}.",config.store_dir),
     }
-    let store: Store = Store {
+    let mut store: Store = Store {
       config: config.clone(),
       keys: match Keys::new(&config) {
         Ok(keys) => keys,
@@ -52,8 +52,113 @@ impl Store {
         _ => {},
       }
     }
+    store.refresh_cache();
     log::info!("Successfully initialized key store.");
     Ok(store)
+  }
+
+  pub(crate) fn refresh_cache(&mut self) {
+    log::info!("Updating cert cache...");
+    log::debug!("Certs in cache: {:?}",self.cache.keys());
+    match fs::read_dir(&self.config.store_dir) {
+      Ok(files) => {
+        for file in files {
+          match file {
+            Ok(file) => {
+              let path = file.path();
+              if path.is_file() {
+                match path.file_name() {
+                  Some(filename) => {
+                    match filename.to_str() {
+                      Some(filename) => {
+                        let filename: String = filename.to_string();
+                        if filename.ends_with(".cert.pem") {
+                          let mut id: String = filename.clone();
+                          let len = filename.len() - ".cert.pem".len();
+                          id.truncate(len);
+                          log::debug!("Cert on disk: {}",id);
+                          if !self.cache.contains_key(&id) {
+                            match fs::read(&path) {
+                              Ok(pem)  =>  {
+                                match X509::from_pem(&pem) {
+                                  Ok(cert)  => {
+                                     log::info!("Found cert {} on disk, loading...",id);
+                                     self.cache.insert(id.clone(),cert.clone());
+                                  },
+                                  Err(err) => log::error!("Failed to parse cert {} from disk: {}",id,err),
+                                }
+                              },
+                              Err(err) => log::error!("Failed to read cert {} from disk: {}",id,err),
+                            };
+                          }
+                        }
+                      },
+                      None => {},
+                    }
+                  },
+                  None => {},
+                }
+              }
+            },
+            Err(_) => {},
+          }
+        }
+      },
+      Err(_) => {},
+    }
+    for (id,cert) in &self.cache {
+      let filename: String = format!("{}{}.cert.pem",self.config.store_dir,id);
+      let path = Path::new(&filename);
+      if !path.exists() {
+        log::info!("Cert {} is in cache but not on disk, writing to disk.",id);
+        match cert.to_pem() {
+          Ok(pem) => {
+            match File::create(&filename) {
+              Ok(mut file) => { let _ = file.write_all(&pem); },
+              Err(_) => {},
+            }
+          },
+          Err(_) => {},
+        }
+      }
+    }
+  }
+
+  pub(crate) fn verify(&mut self, id: &String, cert: &X509) -> bool {
+    self.refresh_cache();
+    let fingerprint: String = hex::encode(match cert.digest(MessageDigest::sha1()) {
+      Ok(fingerprint) => fingerprint,
+      Err(err) => {
+        log::error!("Unable to retrieve fingerprint from cert: {}",err);
+        return false
+      },
+    });
+    log::info!("Verifying cert for {} with fingerprint {}",id,fingerprint);
+    match self.cache.get(id) {
+      Some(cached_cert) => {
+        let cached_fingerprint: String = hex::encode(match cached_cert.digest(MessageDigest::sha1()) {
+          Ok(fingerprint) => fingerprint,
+          Err(err) => {
+            log::error!("Unable to retrieve fingerprint from cached cert: {}",err);
+            return false
+          },
+        });
+        log::info!("Found cert in cache for {} with fingerprint {}",id,cached_fingerprint);
+        if fingerprint == cached_fingerprint {
+          log::info!("Fingerprint for {} matched previous fingerprint {}.",id,fingerprint);
+          return true
+        } else {
+          log::error!("Fingerprint {} for {} doesn't match last connection.",fingerprint,id);
+          return false
+        };
+      },
+      None => {
+        log::info!("First connection for {} with fingerprint {}, saving to cache.",id,fingerprint);
+        self.cache.insert(id.clone(),cert.clone());
+        self.refresh_cache();
+        return true;
+      },
+    }
   }
 }
 
@@ -231,7 +336,7 @@ impl Keys {
     let not_after = Asn1Time::days_from_now(30)?;
     builder.set_not_before(&not_before)?;
     builder.set_not_after(&not_after)?;
-    builder.sign(&pkey, MessageDigest::sha256())?;
+    builder.sign(&pkey, MessageDigest::sha1())?;
     let cert: X509 = builder.build();
     match cert.to_pem() {
       Ok(pem) => {
