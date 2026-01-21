@@ -249,8 +249,50 @@ impl Client {
           match source.as_url() {
             Some(url) => {
               let payload: Option<(String,String)> = match &response.code {
-                ResponseCode::Success        => {
+                ResponseCode::Success => {
                   response.text()
+                },
+                ResponseCode::RedirectTemp => {
+                  request = Some(Request::new(&self.config,&response.head,&Some(source.clone())));
+                  match request {
+                    Some(ref request) => {
+                      match self.request(&request) {
+                        Some(next) => {
+                          response = next;
+                          continue 'main;
+                        },
+                        None => {
+                          let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
+                          Some((String::from("gemini"),body))
+                        },
+                      }
+                    },
+                    None => {
+                      let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
+                      Some((String::from("gemini"),body))
+                    },
+                  }
+                },
+                ResponseCode::RedirectPerm => {
+                  request = Some(Request::new(&self.config,&response.head,&Some(source.clone())));
+                  match request {
+                    Some(ref request) => {
+                      match self.request(&request) {
+                        Some(next) => {
+                          response = next;
+                          continue 'main;
+                        },
+                        None => {
+                          let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
+                          Some((String::from("gemini"),body))
+                        },
+                      }
+                    },
+                    None => {
+                      let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
+                      Some((String::from("gemini"),body))
+                    },
+                  }
                 },
                 _ => {
                   let body: String = format!("#Unsuccessful request:\n\n> {} {}",response.code.clone() as u16,response.head);
