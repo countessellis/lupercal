@@ -187,9 +187,9 @@ impl fmt::Debug for Keys {
 
 impl Keys {
   pub(crate) fn new(config: &Config) -> Result<Keys,String> {
-    let pkey_locked: String   = format!("{}{}.locked.pem",config.store_dir,config.name);
-    let pkey_unlocked: String = format!("{}{}.unlocked.pem",config.store_dir,config.name);
-    let cert_file: String     = format!("{}{}.cert.pem",config.store_dir,config.name);
+    let pkey_locked: String   = format!("{}{}.locked.pem",config.config_dir,config.name);
+    let pkey_unlocked: String = format!("{}{}.unlocked.pem",config.config_dir,config.name);
+    let cert_file: String     = format!("{}{}.cert.pem",config.config_dir,config.name);
     let keypair: Option<Rsa<Private>> = match fs::exists(&pkey_unlocked) {
       Ok(true) => {
         let pem: Vec<u8> = match fs::read(&pkey_unlocked) {
@@ -291,6 +291,7 @@ impl Keys {
   }
 
   fn gen_key(config: &Config) -> Option<Rsa<Private>> {
+    let pkey_locked: String   = format!("{}{}.locked.pem",config.config_dir,config.name);
     match Rsa::generate(DEFAULT_KEY_SIZE) {
       Ok(keypair) => {
         let passphrase: String = match prompt_password("Private Key passphrase:") {
@@ -301,7 +302,6 @@ impl Keys {
           },
         };
         if !passphrase.is_empty() {
-          let pkey_locked: String   = format!("{}{}.locked.pem",config.store_dir,config.name);
           match keypair.private_key_to_pem_passphrase(Cipher::aes_256_cbc(), passphrase.as_bytes()) {
             Ok(pem) => {
               match File::create(&pkey_locked) {
@@ -325,7 +325,7 @@ impl Keys {
   }
 
   fn create_cert(config: &Config, keypair: &Rsa<Private>) -> Result<X509,ErrorStack> {
-    let cert_file: String = format!("{}{}.cert.pem",config.store_dir,config.name);
+    let cert_file: String = format!("{}{}.cert.pem",config.config_dir,config.name);
     let pkey = PKey::from_rsa(keypair.clone())?;
     let mut builder = X509::builder()?;
     builder.set_version(2)?;
@@ -358,7 +358,7 @@ impl Keys {
 
   fn unlock(&self) {
     log::info!("Unlocking private key.");
-    let pkey_unlocked: String   = format!("{}{}.unlocked.pem",self.config.store_dir,self.config.name);
+    let pkey_unlocked: String   = format!("{}{}.unlocked.pem",self.config.config_dir,self.config.name);
     match self.keypair.private_key_to_pem() {
       Ok(pem) => {
         match File::create(&pkey_unlocked) {
@@ -376,7 +376,7 @@ impl Keys {
 
   fn lock(&self) {
     log::info!("Locking private key.");
-    let pkey_unlocked: String   = format!("{}{}.unlocked.pem",self.config.store_dir,self.config.name);
+    let pkey_unlocked: String   = format!("{}{}.unlocked.pem",self.config.config_dir,self.config.name);
     let path: &Path = Path::new(&pkey_unlocked);
     if path.exists() {
       match fs::remove_file(path) {

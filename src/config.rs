@@ -31,8 +31,8 @@ impl Config {
       _                          => DEFAULT_CLIENT_NAME.to_string(),
     };
     let config_dir: String = match dirs::config_dir() {
-      Some(config) => config.display().to_string(),
-      None => DEFAULT_CONFIG_DIR.to_string(),
+      Some(config) => format!("{}/{}/",config.display().to_string(),BUILD_NAME),
+      None => format!("{}/{}/",DEFAULT_CONFIG_DIR.to_string(),BUILD_NAME),
     };
     let cache_dir: String = match mode {
       Mode::Server => {
