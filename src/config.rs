@@ -17,6 +17,7 @@ pub(crate) struct Config {
   pub(crate) proxy: String,
   pub(crate) allow: Vec<String>,
   pub(crate) deny: Vec<String>,
+  pub(crate) config_dir: String,
   pub(crate) cache_dir: String,
   pub(crate) store_dir: String,
   pub(crate) convert_in: String,
@@ -28,6 +29,10 @@ impl Config {
     let name: String = match mode {
       Mode::Server | Mode::Proxy => DEFAULT_SERVER_NAME.to_string(),
       _                          => DEFAULT_CLIENT_NAME.to_string(),
+    };
+    let config_dir: String = match dirs::config_dir() {
+      Some(config) => config.display().to_string(),
+      None => DEFAULT_CONFIG_DIR.to_string(),
     };
     let cache_dir: String = match mode {
       Mode::Server => {
@@ -103,6 +108,7 @@ impl Config {
       proxy:       String::new(),
       allow:       Vec::new(),
       deny:        Vec::new(),
+      config_dir:  config_dir,
       cache_dir:   cache_dir,
       store_dir:   store_dir,
       convert_in:  String::new(),
@@ -120,6 +126,7 @@ impl Config {
     config.push(format!("proxy: {}",self.proxy));
     config.push(format!("allow: {}",self.allow.join(",")));
     config.push(format!("deny: {}",self.deny.join(",")));
+    config.push(format!("config_dir: {}",self.config_dir));
     config.push(format!("cache_dir: {}",self.cache_dir));
     config.push(format!("store_dir: {}",self.store_dir));
     config.push(format!("convert_in: {}",self.convert_in));
@@ -134,7 +141,7 @@ impl Config {
   pub fn new(mode: &Mode) -> Config {
     let mut config = Config::defaults(&mode);
     println!("\n");
-    // General:
+    config.cache_dir = util::prompt(format!("Config directory: (default: {})",config.config_dir),config.config_dir.clone());
     config.mode = match Mode::from_str(util::prompt(format!("Mode: (server/proxy/client/convert, default: {})",config.mode),config.mode.to_string()).as_str()) {
       Ok(mode) => mode,
       Err(_)   => Default::default(),
@@ -293,6 +300,7 @@ impl Config {
               config.deny.push(host.to_string());
             }
           },
+          "config_dir"  => config.config_dir = value.clone(),
           "cache_dir"   => config.cache_dir = value.clone(),
           "store_dir"   => config.store_dir = value.clone(),
           "convert_in"  => config.convert_in = value.clone(),
@@ -382,6 +390,12 @@ impl Config {
         "--proxy" => {
           match args.next() {
             Some(value) => config.proxy = value,
+            None => {},
+          }
+        },
+        "--config-dir" => {
+          match args.next() {
+            Some(value) => config.config_dir = value,
             None => {},
           }
         },
