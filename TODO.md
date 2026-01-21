@@ -3,6 +3,8 @@
 ## To finish up v1.0.0:
 
 - Fill in more of the documentation I want in both README and capsule.
+- Save known perminant redirects to file in cache.
+- Limit redirects to five times, need to figure out how to do this. Maybe a field in the request struct?
 - Add the packaging and build code for the release.
 
 ## Future After v1.0.0 Release:
