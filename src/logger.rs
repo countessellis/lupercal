@@ -58,7 +58,8 @@ pub fn init() {
       },
     };
     let tui_layer = tui_logger::TuiTracingSubscriberLayer;
-    let registry = Registry::default().with(tui_layer).with(filter_layer).with(fmt_layer).init();
+    let registry = Registry::default().with(tui_layer).with(filter_layer).with(fmt_layer);
+    registry.init()
   }
 
   #[cfg(not(debug_assertions))]
