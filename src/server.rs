@@ -77,15 +77,22 @@ impl Server {
                     let requested_name = ssl.servername(NameType::HOST_NAME);
                     match requested_name {
                       Some(name) => {
-                        if allow.contains(&name.to_string()) {
+                        log::debug!("Connection request indicates server name: {}.",name);
+                        if !allow.is_empty() && allow.contains(&name.to_string()) {
+                          log::debug!("Server name is allowed.");
                           Ok(())
-                        } else if !deny.contains(&name.to_string()) {
+                        } else if !deny.is_empty() && !deny.contains(&name.to_string()) {
+                          log::debug!("Server name is denied.");
                           Err(openssl::ssl::SniError::ALERT_FATAL)
                         } else {
+                          log::debug!("Server name not in allow or deny, so allowing.");
                           Ok(())
                         }
                       },
-                      None => Err(openssl::ssl::SniError::ALERT_FATAL),
+                      None => {
+                        log::debug!("Connection request contained no server name.");
+                        Err(openssl::ssl::SniError::ALERT_FATAL)
+                      },
                     }
                   });
                   builder.set_private_key(&PKey::from_rsa(keys.keys.keypair.clone()).unwrap()).unwrap();

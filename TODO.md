@@ -3,7 +3,6 @@
 ## To finish up v1.0.0:
 
 - Fill in more of the documentation I want in both README and capsule.
-- Fix bug where client hangs when proxy fails, not sure of this is client side proxy side, but doesn't happen direct without proxy.
 - Fix bug where currently --cache and --store command line seem to be ignored or overwritten with default.
 - Add the packaging and build code for the release.
 

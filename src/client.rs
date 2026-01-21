@@ -248,7 +248,15 @@ impl Client {
         Some(ref source) => {
           match source.as_url() {
             Some(url) => {
-              let payload: Option<(String,String)> = response.text();
+              let payload: Option<(String,String)> = match &response.code {
+                ResponseCode::Success        => {
+                  response.text()
+                },
+                _ => {
+                  let body: String = format!("#Unsuccessful request:\n\n> {} {}",response.code.clone() as u16,response.head);
+                  Some((String::from("gemini"),body))
+                },
+              };
               match payload {
                 Some((subtype,text)) => {
                   match terminal::enable_raw_mode() {
