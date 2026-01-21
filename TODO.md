@@ -3,7 +3,6 @@
 ## To finish up v1.0.0:
 
 - Fill in more of the documentation I want in both README and capsule.
-- Fix bug where currently --cache and --store command line seem to be ignored or overwritten with default.
 - Add the packaging and build code for the release.
 
 ## Future After v1.0.0 Release:
