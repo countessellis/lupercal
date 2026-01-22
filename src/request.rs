@@ -11,6 +11,7 @@ pub(crate) struct Request {
   pub(crate) config: Config,
   pub(crate) next: String,
   pub(crate) prev: Box<Option<Request>>,
+  pub(crate) redirects: u8,
 }
 
 impl fmt::Display for Request {
@@ -20,15 +21,15 @@ impl fmt::Display for Request {
 }
 
 impl Request {
-  pub(crate) fn new(config: &Config, next: &String, prev: &Option<Request>) -> Request {
-    Request { config: config.clone(), next: next.clone(), prev: Box::new(prev.clone()) }
+  pub(crate) fn new(config: &Config, next: &String, prev: &Option<Request>, redirects: u8) -> Request {
+    Request { config: config.clone(), next: next.clone(), prev: Box::new(prev.clone()), redirects: redirects }
   }
 
   pub(crate) fn from_args(config: &Config) -> Option<Request> {
     let mut args: Args = args();
     while let Some(arg) = args.next() {
       if arg.starts_with("gemini://") {
-        return Some(Self::new(&config,&arg,&None));
+        return Some(Self::new(&config,&arg,&None,0));
       }
     }
     None
@@ -44,7 +45,7 @@ impl Request {
 
   pub(crate) fn from_bytes(config: &Config, bytes: &[u8]) -> Option<Request> {
     match str::from_utf8(&bytes) {
-      Ok(request) => Some(Request::new(&config.clone(),&request.trim_end().to_string(),&Box::new(None))),
+      Ok(request) => Some(Self::new(&config.clone(),&request.trim_end().to_string(),&Box::new(None),0)),
       Err(err) => {
         log::error!("Failed to parse request: {}",err);
         None

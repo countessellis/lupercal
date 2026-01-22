@@ -12,7 +12,7 @@ use ratatui::{
   style::{Style,Modifier},
   widgets::*,
 };
-use std::{net::TcpStream,thread,time::Duration};
+use std::{fs,io::ErrorKind,io::Write,net::TcpStream,thread,time::Duration};
 use textwrap::wrap;
 use tui_logger::{TuiLoggerWidget,TuiWidgetState};
 use url::Url;
@@ -57,6 +57,23 @@ impl Client {
   }
 
   pub(crate) fn request(&self,request: &Request) -> Option<Response> {
+    let mut request: Request = request.clone();
+    let redirect_cache: String = format!("{}/redirects.txt",self.config.cache_dir);
+    match fs::read_to_string(redirect_cache) {
+      Ok(redirect_cache) => {
+        for entry in redirect_cache.lines() {
+          let parts: Vec<String> = entry.split(" ").map(|part| part.to_string()).collect();
+          if parts[0] == request.next {
+            log::info!("Following cached perminant redirect from {} to {}",request.next,parts[1]);
+            request.next = parts[1].clone();
+            break;
+          }
+        }
+      },
+      Err(err) => if err.kind() != ErrorKind::NotFound {
+        log::error!("Failed to load redirect cache, skipping: {}",err);
+      },
+    }
     match request.as_url() {
       Some(url) => {
         log::info!("Making request for: {}",request.next);
@@ -253,45 +270,65 @@ impl Client {
                   response.text()
                 },
                 ResponseCode::RedirectTemp => {
-                  request = Some(Request::new(&self.config,&response.head,&Some(source.clone())));
-                  match request {
-                    Some(ref request) => {
-                      match self.request(&request) {
-                        Some(next) => {
-                          response = next;
-                          continue 'main;
-                        },
-                        None => {
-                          let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
-                          Some((String::from("gemini"),body))
-                        },
-                      }
-                    },
-                    None => {
-                      let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
-                      Some((String::from("gemini"),body))
-                    },
+                  if source.redirects < 5 {
+                    request = Some(Request::new(&self.config,&response.head,&Some(source.clone()),source.redirects.saturating_add(1)));
+                    match request {
+                      Some(ref request) => {
+                        match self.request(&request) {
+                          Some(next) => {
+                            response = next;
+                            continue 'main;
+                          },
+                          None => {
+                            let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
+                            Some((String::from("gemini"),body))
+                          },
+                        }
+                      },
+                      None => {
+                        let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
+                        Some((String::from("gemini"),body))
+                      },
+                    }
+                  } else {
+                    let body: String = format!("#Too many redirects:\n\n> {} {}",response.code.clone() as u16,response.head);
+                    Some((String::from("gemini"),body))
                   }
                 },
                 ResponseCode::RedirectPerm => {
-                  request = Some(Request::new(&self.config,&response.head,&Some(source.clone())));
-                  match request {
-                    Some(ref request) => {
-                      match self.request(&request) {
-                        Some(next) => {
-                          response = next;
-                          continue 'main;
-                        },
-                        None => {
-                          let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
-                          Some((String::from("gemini"),body))
-                        },
-                      }
-                    },
-                    None => {
-                      let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
-                      Some((String::from("gemini"),body))
-                    },
+                  if source.redirects < 5 {
+                    let redirect_cache: String = format!("{}/redirects.txt",self.config.cache_dir);
+                    match fs::OpenOptions::new().write(true).append(true).create(true).open(redirect_cache) {
+                      Ok(mut redirect_cache) => {
+                        match writeln!(redirect_cache,"{} {}",source.next,response.head) {
+                          Ok(()) => {},
+                          Err(err) => log::error!("Failed to cache perminant redirect, treating as temporary: {}",err),
+                        }
+                      },
+                      Err(err) => log::error!("Failed to open redirect cache, treating as temporary: {}",err),
+                    }
+                    request = Some(Request::new(&self.config,&response.head,&Some(source.clone()),source.redirects.saturating_add(1)));
+                    match request {
+                      Some(ref request) => {
+                        match self.request(&request) {
+                          Some(next) => {
+                            response = next;
+                            continue 'main;
+                          },
+                          None => {
+                            let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
+                            Some((String::from("gemini"),body))
+                          },
+                        }
+                      },
+                      None => {
+                        let body: String = format!("#Redirect failed:\n\n> {} {}",response.code.clone() as u16,response.head);
+                        Some((String::from("gemini"),body))
+                      },
+                    }
+                  } else {
+                    let body: String = format!("#Too many redirects:\n\n> {} {}",response.code.clone() as u16,response.head);
+                    Some((String::from("gemini"),body))
                   }
                 },
                 _ => {
@@ -383,7 +420,7 @@ impl Client {
                                                   Ok(url) => {
                                                     match url.scheme() {
                                                       "gemini" => {
-                                                        request = Some(Request::new(&self.config,&link,&Some(source.clone())));
+                                                        request = Some(Request::new(&self.config,&link,&Some(source.clone()),0));
                                                         match request {
                                                           Some(ref request) => {
                                                             match self.request(&request) {
