@@ -4,14 +4,17 @@
 
 All modes can be ran from the lupercal binary, which defaults to client if no mode it specified.
 
+```
 lupercal --mode [server|client|proxy|convert] [options] [url]
+```
 
 Use the options below depending on which mode Lupercal is ran as:
 
-## Client
+### Client
 
 In client mode, Lupercal runs as a client to request content from gemini servers.
 
+```
 lupercal [options] url
 lupercal --mode client [options] url
 lupercal-client [options] url
@@ -28,11 +31,13 @@ lupercal-client [options] url
     --deny   [list of hostnames]        If present, blocks client requests that are to hostnames in the list, useful to block undesirable sites. Comma separated.
     --lock                              Lock the private key, requiring passprase on future runs.
     --unlock                            Unlock the private key, to not require passprase on future runs (warning, insecure mode).
+```
 
-## Server
+### Server
 
 In server mode, Lupercal runs as a gemini server.
 
+```
 lupercal --mode server [options]
 lupercal-server [options]
 
@@ -45,9 +50,13 @@ lupercal-server [options]
     --listen [IP address]               Specify a specific IP address to listen on.
     --lock                              Lock the private key, requiring passprase on future runs.
     --unlock                            Unlock the private key, to not require passprase on future runs (warning, insecure mode).
+```
 
-## Proxy
+### Proxy
 
+In proxy mode, Lupercal runs a server that accepts requests for other Gemini servers, then forwards the request to the other server, returning the response back to the client. Use the --proxy option in the client to use a proxy.
+
+```
 lupercal --mode proxy [options]
 lupercal-proxy [options]
 
@@ -60,14 +69,17 @@ lupercal-proxy [options]
     --deny   [list of hostnames]        If present, blocks proxy requests that are to hostnames in the list. Comma separated.
     --lock                              Lock the private key, requiring passprase on future runs.
     --unlock                            Unlock the private key, to not require passprase on future runs (warning, insecure mode).
+```
 
-## Convert
+### Convert
 
 Convert a gemini capsule to a simple HTML website.
 
+```
 lupercal --mode convert --in [gemini directory] --out [html directory]
 lupercal-convert --in [gemini directory] --out [html directory]
 
   Options:
     --in [gemini directory]             Gemini capsule directory to convert.
     --out [HTML directory]              HTML directory to place the converted site into.
+```
