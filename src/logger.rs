@@ -18,7 +18,6 @@ pub fn init() {
   };
 
   let tui_layer = tui_logger::TuiTracingSubscriberLayer;
-  tui_logger::init_logger(tui_logger::LevelFilter::Info).unwrap();
   let filter_layer = tracing_subscriber::filter::LevelFilter::from_str(&loglevel.to_string()).unwrap_or(tracing_subscriber::filter::LevelFilter::INFO);
 
   #[cfg(debug_assertions)]
@@ -69,8 +68,7 @@ pub fn init() {
     if std::env::var("JOURNAL_STREAM").is_ok() {
         match tracing_journald::layer() {
           Ok(journal_layer) => {
-            let fmt_layer = fmt::layer().with_level(DEFAULT_LOG_FORMAT_LEVEL);
-            let registry = Registry::default().with(tui_layer).with(filter_layer).with(fmt_layer);
+            let registry = Registry::default().with(tui_layer);
             registry.with(journal_layer).init();
             return;
           },

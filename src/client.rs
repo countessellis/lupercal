@@ -354,7 +354,7 @@ impl Client {
                     .border_style(Style::default().add_modifier(Modifier::BOLD))
                     .padding(Padding::new(1,1,1,1));
                   match terminal.draw(|frame| {
-                    let chunks = Layout::vertical([Constraint::Min(0),Constraint::Length(26)]).split(frame.area());
+                    let chunks = Layout::vertical([Constraint::Min(0),Constraint::Length(10)]).split(frame.area());
                     let main_area = chunks[0];
                     let log_area = chunks[1];
                     (lines,links) = Self::format(subtype.clone(),text.clone(),(main_area.width-4) as usize);
@@ -379,12 +379,12 @@ impl Client {
                     );
                     let log_widget = TuiLoggerWidget::default()
                       .block(Block::bordered().title("Log"))
+                      .style(Style::default().fg(Color::Blue))
                       .output_target(false)
                       .output_timestamp(None)
                       .output_level(None)
                       .output_file(false)
                       .output_line(false)
-                      .style(Style::default().fg(Color::Blue))
                       .state(&logger_state);
                     frame.render_widget(log_widget, log_area);
                   }) {
@@ -431,6 +431,10 @@ impl Client {
                                                             match self.request(&request) {
                                                               Some(next) => {
                                                                 response = next;
+                                                                vert_scroll_pos = 0;
+                                                                vert_scroll_state = vert_scroll_state.position(vert_scroll_pos);
+                                                                hori_scroll_pos = 0;
+                                                                hori_scroll_state = hori_scroll_state.position(hori_scroll_pos);
                                                                 continue 'main;
                                                               },
                                                               None => break,
@@ -468,6 +472,10 @@ impl Client {
                                   match self.request(&request) {
                                     Some(next) => {
                                       response = next;
+                                      vert_scroll_pos = 0;
+                                      vert_scroll_state = vert_scroll_state.position(vert_scroll_pos);
+                                      hori_scroll_pos = 0;
+                                      hori_scroll_state = hori_scroll_state.position(hori_scroll_pos);
                                       continue 'main;
                                     },
                                     None => break,
@@ -645,3 +653,4 @@ impl Client {
     (formatted,links)
   }
 }
+

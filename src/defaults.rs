@@ -10,8 +10,11 @@ pub(crate) const AUTHORS:    &str = env!("CARGO_PKG_AUTHORS");
 pub(crate) const COPYRIGHT:  &str = "2026";
 pub(crate) const LICENSE:    &str = env!("CARGO_PKG_LICENSE");
 
+#[cfg(debug_assertions)]
+pub(crate) const DEFAULT_LOG_LEVEL: LevelFilter                                            = LevelFilter::Debug;
+#[cfg(not(debug_assertions))]
+pub(crate) const DEFAULT_LOG_LEVEL: LevelFilter                                            = LevelFilter::Info;
 
-pub(crate) const DEFAULT_LOG_LEVEL: LevelFilter                                            = LevelFilter::Debug; // LevelFilter::Info;
 pub(crate) const TUI_LOG_LEVEL: LevelFilter                                                = LevelFilter::Info;
 pub(crate) const DEFAULT_LOG_FORMAT_TIMESTAMP: Option<env_logger::fmt::TimestampPrecision> = Some(TimestampPrecision::Millis); // None;
 pub(crate) const DEFAULT_LOG_FORMAT_LEVEL: bool                                            = true; // false;
