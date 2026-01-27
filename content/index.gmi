@@ -8,10 +8,15 @@ Gemini is named for the NASA space program and crafts that were the first two-ma
 
 Lupercal is a play off the use of Gemini as the twins. It represents a different pair of twins, Romulus and Remus, the founders of Rome. Lupercal is a form of Lupercus, from lupus, "wolf" and arceō, "to fend off". Lupercal or Lupercalia was a Roman festival and sacrifice to Lycaean Pan, also called Faunus in Latin, every February. The sacrifice occurred in the cave in which it was believed the shewolf nursed Romulus and Remus, so the festival and sacrifice held a dual meaning, Pan or Faunus as both the wolf that consumes and the protector against the wolf as well as the protection and nursing of the founding twins of Rome.
 
+
+
 ## Details
 
 => usage.gmi Usage Details
 => sample.gmi A sample gemtext file that has all the formatting, for testing of demonstrating
+
+
+
 
 ## Gemini Protocol Documentation
 
@@ -28,3 +33,6 @@ A mirror of the official documentation found on the web at:
 ### Gemini Text Format
 
 => /gemini-specification/gemini-text/specification Specification
+
+
+
