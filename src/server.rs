@@ -69,7 +69,7 @@ impl Server {
             let mut keys: Store = self.keys.clone();
             let backend: Backend = self.backend.clone();
             move || {
-              match SslAcceptor::mozilla_modern_v5(SslMethod::tls_server()) {
+              match SslAcceptor::mozilla_intermediate_v5(SslMethod::tls_server()) {
                 Ok(mut builder) => {
                   let allow = config.allow.clone();
                   let deny = config.deny.clone();

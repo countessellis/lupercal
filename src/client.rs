@@ -1,6 +1,6 @@
 use gag::Hold;
 use openssl::{
-  ssl::{ErrorCode,SslConnector,SslMethod,SslVerifyMode},
+  ssl::{ErrorCode,SslConnector,SslMethod,SslVerifyMode,SslVersion},
   x509::X509VerifyResult,
   pkey::PKey,
 };
@@ -110,6 +110,9 @@ impl Client {
                           log::error!("Failed to set private: {}",err);
                         } else {
                           log::info!("Certificate and key set.");
+                        }
+                        if let Err(err) = builder.set_min_proto_version(Some(SslVersion::TLS1_2)) {
+                          log::error!("Failed to set minimum TLS version to 1.2: {}",err);
                         }
                       },
                       Err(err) => {
