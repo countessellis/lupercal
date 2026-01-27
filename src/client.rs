@@ -13,6 +13,7 @@ use ratatui::{
   widgets::*,
 };
 use std::{fs,io::ErrorKind,io::Write,net::TcpStream,thread,time::Duration};
+use strip_prefix_suffix_sane::StripPrefixSuffixSane;
 use textwrap::wrap;
 use tui_logger::{TuiLoggerWidget,TuiWidgetState};
 use url::Url;
@@ -103,13 +104,13 @@ impl Client {
                     builder.set_verify(SslVerifyMode::PEER);
                     match PKey::from_rsa(self.keys.keys.keypair.clone()) {
                       Ok(pkey) => {
-                        log::info!("Initializing client certificate for connection.");
+                        log::debug!("Initializing client certificate for connection.");
                         if let Err(err) = builder.set_certificate(&self.keys.keys.cert) {
                           log::error!("Failed to set certificate: {}",err);
                         } else if let Err(err) = builder.set_private_key(&pkey) {
                           log::error!("Failed to set private: {}",err);
                         } else {
-                          log::info!("Certificate and key set.");
+                          log::debug!("Certificate and key set.");
                         }
                         if let Err(err) = builder.set_min_proto_version(Some(SslVersion::TLS1_2)) {
                           log::error!("Failed to set minimum TLS version to 1.2: {}",err);
@@ -378,11 +379,12 @@ impl Client {
                     );
                     let log_widget = TuiLoggerWidget::default()
                       .block(Block::bordered().title("Log"))
-                      .style_error(Style::default().fg(Color::Red))
-                      .style_warn(Style::default().fg(Color::Yellow))
-                      .style_info(Style::default().fg(Color::Blue))
-                      .style_debug(Style::default().fg(Color::Green))
-                      .style_trace(Style::default().fg(Color::Gray))
+                      .output_target(false)
+                      .output_timestamp(None)
+                      .output_level(None)
+                      .output_file(false)
+                      .output_line(false)
+                      .style(Style::default().fg(Color::Blue))
                       .state(&logger_state);
                     frame.render_widget(log_widget, log_area);
                   }) {
@@ -570,35 +572,35 @@ impl Client {
           } else {
             match line {
               line if line.starts_with("###") => {
-                let line: String = line.strip_prefix("###").unwrap_or(&line).trim_start().to_string();
+                let line: String = line.strip_prefix("###").unwrap_or(&line).strip_prefix_sane(" ").to_string();
                 let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().italic()));
                 }
               },
                 line if line.starts_with("##") => {
-                let line: String = line.strip_prefix("##").unwrap_or(&line).trim_start().to_string();
+                let line: String = line.strip_prefix("##").unwrap_or(&line).strip_prefix_sane(" ").to_string();
                 let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().underlined()));
                 }
               },
               line if line.starts_with("#") => {
-                let line: String = line.strip_prefix("#").unwrap_or(&line).trim_start().to_string();
+                let line: String = line.strip_prefix("#").unwrap_or(&line).strip_prefix_sane(" ").to_string();
                 let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().bold()));
                 }
               },
               line if line.starts_with(">") => {
-                let line: String = line.strip_prefix(">").unwrap_or(&line).trim_start().to_string();
+                let line: String = line.strip_prefix(">").unwrap_or(&line).strip_prefix_sane(" ").to_string();
                 let lines: Vec<String> = wrap(&line,width-2).iter().map(|s| format!("  {}",s)).collect();
                 for line in lines {
                   formatted.push(Line::style(line.into(),Style::new().italic().dim()));
                 }
               },
               line if line.starts_with("=>") => {
-                let line: String = line.strip_prefix("=>").unwrap_or(&line).trim_start().to_string();
+                let line: String = line.strip_prefix("=>").unwrap_or(&line).strip_prefix_sane(" ").to_string();
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 let link: &str = parts[0];
                 links.push(link.to_string());
@@ -613,7 +615,7 @@ impl Client {
                 }
               },
               line if line.starts_with("*") => {
-                let line: String = line.strip_prefix("*").unwrap_or(&line).trim_start().to_string();
+                let line: String = line.strip_prefix("*").unwrap_or(&line).strip_prefix_sane(" ").to_string();
                 let line: String = format!("{} {}","\u{2022}",line);
                 let lines: Vec<String> = wrap(&line,width).iter().map(|s| s.to_string()).collect();
                 for line in lines {

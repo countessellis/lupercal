@@ -52,6 +52,10 @@ tracing-subscriber = { version = "0.3.22", features = ["time"] }
 is-terminal = "0.4.17"
 hex = "0.4.3"
 time = { version = "0.3.45", features = ["formatting", "macros", "parsing"] }
+strip-prefix-suffix-sane = "0.1.0"
+tracing-log = "0.2.0"
+tracing-journald = "0.3.2"
+tracing-appender = "0.2.4"
 
 [build-dependencies]
 chrono = "0.4.42"

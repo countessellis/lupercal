@@ -61,7 +61,7 @@ impl Store {
   }
 
   pub(crate) fn refresh_cache(&mut self) {
-    log::info!("Updating cert cache...");
+    log::debug!("Updating cert cache...");
     log::debug!("Certs in cache: {:?}",self.cache.keys());
     match fs::read_dir(&self.config.store_dir) {
       Ok(files) => {
@@ -113,7 +113,7 @@ impl Store {
       let filename: String = format!("{}{}.cert.pem",self.config.store_dir,id);
       let path = Path::new(&filename);
       if !path.exists() {
-        log::info!("Cert {} is in cache but not on disk, writing to disk.",id);
+        log::debug!("Cert {} is in cache but not on disk, writing to disk.",id);
         match cert.to_pem() {
           Ok(pem) => {
             match File::create(&filename) {
@@ -136,7 +136,7 @@ impl Store {
         return false
       },
     });
-    log::info!("Verifying cert for {} with fingerprint {}",id,fingerprint);
+    log::debug!("Verifying cert for {} with fingerprint {}",id,fingerprint);
     match self.cache.get(id) {
       Some(cached_cert) => {
         let cached_fingerprint: String = hex::encode(match cached_cert.digest(MessageDigest::sha1()) {
