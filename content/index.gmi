@@ -12,3 +12,19 @@ Lupercal is a play off the use of Gemini as the twins. It represents a different
 
 => usage.gmi Usage Details
 => sample.gmi A sample gemtext file that has all the formatting, for testing of demonstrating
+
+## Gemini Protocol Documentation
+
+A mirror of the official documentation found on the web at:
+
+=> https://gitlab.com/gemini-specification Official Gitlab Repositories
+
+### Protocal Documentation
+
+=> /gemini-specification/protocol/specification.gmi Specification
+=> /gemini-specification/protocol/best-practices.gmi Best Practices
+=> /gemini-specification/protocol/faq.gmi Frequently Asked Questions
+
+### Gemini Text Format
+
+=> /gemini-specification/gemini-text/specification Specification

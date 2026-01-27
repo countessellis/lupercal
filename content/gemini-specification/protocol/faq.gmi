@@ -1,0 +1,736 @@
+# Project Gemini FAQ
+
+Last updated: 2021-02-21
+
+## 1. Overview
+
+### 1.1 What is Gemini?
+
+Gemini is a new application-level internet protocol for the distribution of
+arbitrary files, with some special consideration for serving a lightweight
+hypertext format which facilitates linking between files.  You may think of
+Gemini as "the web, stripped right back to its essence" or as "Gopher,
+souped up and modernised just a little", depending upon your perspective
+(the latter view is probably more accurate).  Gemini may be of interest to
+people who are:
+
+* Opposed to the web's ubiquitous tracking of users
+
+* Tired of nagging pop-ups, obnoxious adverts, autoplaying videos and other
+  misfeatures of the modern web
+
+* Interested in low-power computing and/or low-speed networks, either by
+  choice or necessity
+
+Gemini is intended to be simple, but not necessarily as simple as possible. 
+Instead, the design strives to maximise its "power to weight ratio", while
+keeping its weight within acceptable limits.  Gemini is also intended to be
+very privacy conscious, to be difficult to extend in the future (so that it
+will *stay* simple and privacy conscious), and to be compatible with a "do
+it yourself" computing ethos.  For this last reason, Gemini is technically
+very familiar and conservative: it's a protocol in the traditional
+client-server request-response paradigm, and is built on mature,
+standardised technology like URIs, MIME media types, and TLS.
+
+### 1.2 How old is Gemini?
+
+Project Gemini started in June 2019.  While the protocol itself is largely
+finalised, the available software, resources and community are still in a
+relatively early (though thriving!) state of development.
+
+### 1.3 Who is in charge of Gemini?
+
+Project Gemini was originally started by Solderpunk <solderpunk _at_ posteo
+_dot_ net>, who remains the "Benevolent Dictator" of the project.  However,
+the protocol has been designed in collaboration with a loose and informal
+community of many interested parties via emails, posts in Gopher's
+"phlogosphere" and toots in the Fediverse.  Many people have shaped
+significant parts of the protocol, so despite having a single leader, Gemini
+should not be thought of as the work of a single person.
+
+In February 2021, long time Gemini contributor Sean Conner was granted some
+decision making authority to help finalise the Gemini specification during a
+time when Solderpunk was unable to dedicate the necessary time and energy to
+the project.
+
+### 1.4 How large is "Geminispace"?
+
+It's difficult to know exactly.  Counting unique hostnames of Gemini servers
+is likely to exaggerate the size of the space, since some multi-user sites
+give each user their own subdomain.  On the other hand, counting unique IP
+addresses is likely to underestimate the size, as Gemini allows multiple
+different domains to be served from the same IP.  At any rate, as of early
+2021 there were about 200,000 known Gemini URLs, spread across about 750
+"capsules" (the Gemini community's term for "sites"), 500 domains and 600 IP
+addresses.  The space is growing rapidly, though.  You can find the latest
+statistics as the link below.
+
+=> gemini://gemini.bortzmeyer.org/software/lupa/stats.gmi Geminispace statistics provided by Stéphane Bortzmeyer's "Lupa" crawler
+
+### 1.5 What stage of its lifecycle is the project in?
+
+The current (informal) specification of the protocol is largely frozen,
+modulo small changes to remove ambiguity and address edge cases. 
+Suggestions for new features will not be considered, as the protocol is
+considered feature complete.  Going forward, the main focus of the project
+now is on growing the community around the protocol, as well as working on
+translating the existing specification into a more precise and formal
+version which might be considered for submission to internet standards
+bodies such as IETF and IANA.
+
+### 1.6 Do you really think you can replace the web?
+
+Not for a minute!  Nor does anybody involved with Gemini want to destroy
+Gopherspace.  Gemini is not intended to replace either Gopher or the web,
+but to co-exist peacefully alongside them as one more option which people
+can freely choose to use if it suits them.  In the same way that some people
+currently serve the same content via gopher and the web, people will be able
+to "bihost" or "trihost" content on whichever combination of protocols they
+think offer the best match to their technical, philosophical and aesthetic
+requirements and those of their intended audience.
+
+### 1.7 What's with the name?
+
+It's a reference to the pre-shuttle era of US manned spaceflight, which
+consisted of three projects.  The first was Project Mercury, which was a
+fairly minimalist "proof of concept" and part of the race to put a human in
+space soonest (which the Soviet Union won with their Vostok project). 
+Mercury was a one-man capsule with no ability to adjust to its own orbit
+after launch and only one Mercury flight lasted longer than a single day. 
+The last was Project Apollo, which was large, heavy, complicated and
+expensive but could, of course, fly three men to the moon and back.
+
+Less well known to the modern public, Project Gemini was the "middle child":
+a two person capsule which could rendezvous and dock with other craft in
+orbit, could be depressurised and repressurised in orbit to facilitate
+spacewalks, and whose longest flight was almost two weeks - longer than any
+Apollo mission!  In terms of size, weight and cost Gemini was much closer to
+Mercury than to Apollo, but in terms of capabilities it was the other way
+around - there were even plans (which never eventuated) to do circumlunar
+Gemini flights!
+
+Hopefully the analogy is obvious: Gopher is akin to Mercury, and the web is
+akin to Apollo.  Gemini hopes to sit between the two, doing more with less.
+
+Gemini very deliberately didn't receive a name which had *anything* to do
+with gophers, or other rodents, or even other animals.  During the earliest
+phlog-based discussions which eventually grew into Project Gemini, a lack of
+careful writing meant it was sometimes unclear whether people were talking
+about replacing Gopher outright, or adding unofficial,
+compatibility-breaking upgrades into existing Gopher clients and servers. 
+When idle discussion turned into an actual project, it seemed wise to send a
+clearer message.
+
+### 1.8 Where can I learn more?
+
+The official home of Project Gemini is the gemini.circumlunar.space server. 
+It serves the latest version of this FAQ document, as well the protocol
+specification, recommended best practices and other official documentation
+via Gemini, Gopher and HTTPS, on IPv4 and IPv6.
+
+Official discussion regarding Gemini happens on a mailing list:
+
+=> https://lists.orbitalfox.eu/listinfo/gemini		Subscribe to the list and view archives via the web
+=> gemini://rawtext.club:1965/~sloum/geminilist/	View list archives via Gemini
+
+Anybody who is running a Gemini server or implementing a Gemini client or
+server software is strongly encouraged to subscribe to the list.
+
+Casual discussion regarding Gemini also happens in the #gemini channel on
+the tilde.chat IRC server:
+
+=> gemini://makeworld.gq/cgi-bin/gemini-irc		View IRC logs via Gemini
+
+# 2. Protocol design
+
+## 2.1 What are the design criteria for Gemini?
+
+The following criteria were informally put in place at the beginning of the
+project.  It's debatable how closely some of these goals have been met, but
+in general Gemini is still quite close to this target.
+
+### 2.1.1 Simplicity
+
+In particular, Gemini strives for simplicity of client implementation. 
+Modern web browsers are so complicated that they can only be developed by
+very large and expensive projects.  This naturally leads to a very small
+number of near-monopoly browsers, which stifles innovation and diversity and
+allows the developers of these browsers to dictate the direction in which
+the web evolves.
+
+Gemini aims to be simple, but not *too* simple.  Gopher is simpler at a
+protocol level, but as a consequence the client is eternally uncertain: what
+character encoding is this text in?  Is this text the intended content or an
+error message from the server?  What kind of file is this binary data? 
+Because of this, a robust Gopher client is made *less* simple by needing to
+infer or guess missing information.
+
+Early Gemini discussion included three clear goals with regard to
+simplicity:
+
+* It should be possible for somebody who had no part in designing the
+  protocol to accurately hold the entire protocol spec in their head after
+  reading a well-written description of it once or twice.
+
+* A basic but usable (not ultra-spartan) client should fit comfortably
+  within 50 or so lines of code in a modern high-level language.  Certainly
+  not more than 100.
+
+* A client comfortable for daily use which implements every single protocol
+  feature should be a feasible weekend programming project for a single
+  developer.
+
+It's debatable to what extent these goals have been met.  Experiments
+suggest that a very basic interactive client takes more like a minimum of
+100 lines of code, and a comfortable fit and moderate feature completeness
+need more like 200 lines.  But Gemini still seems to be in the ballpark of
+these goals.
+
+### 2.1.2 Privacy
+
+Gemini is designed with an acute awareness that the modern web is a privacy
+disaster, and that the internet is not a safe place for plaintext.  Things
+like browser fingerprinting and Etag-based "supercookies" are an important
+cautionary tale: user tracking can and will be snuck in via the backdoor
+using protocol features which were not designed to facilitate it.  Thus,
+protocol designers must not only avoid designing in tracking features (which
+is easy), but also assume active malicious intent and avoid designing
+anything which could be subverted to provide effective tracking.  This
+concern manifests as a deliberate non-extensibility in many parts of the
+Gemini protocol.
+
+### 2.1.3 Generality
+
+The "first class" application of Gemini is human consumption of
+predominantly written material - to facilitate something like gopherspace,
+or like "reasonable webspace" (e.g.  something which is comfortably usable
+in Lynx or Dillo).  But, just like HTTP can be, and is, used for much, much
+more than serving HTML, Gemini should be able to be used for as many other
+purposes as possible without compromising the simplicity and privacy
+criteria above.  This means taking into account possible applications built
+around non-text files and non-human clients.
+
+## 2.2 Which shortcomings of Gopher does Gemini overcome?
+
+Gemini allows for:
+
+* Unambiguous use of arbitrary non-ASCII character sets.
+
+* Identifying binary content using MIME types instead of a small set of
+  badly outdated item types.
+
+* Clearly distinguishing successful transactions from failed ones.
+
+* Linking to resources served over other protocols via simple URLs, without
+  ugly hacks.
+
+* Redirects to prevent broken links when content moves or is rearranged.
+
+* Domain-based virtual hosting.
+
+Text in Gemini documents is wrapped by the client to fit the device's
+viewport, rather than being "hard wrapped" at ~80 characters with newline
+characters.  This means content displays equally well on phones, tablets,
+laptops and desktops.
+
+Gemini does away with Gopher's strict directory / text dichotomy and lets
+you insert links in prose.
+
+Gemini mandates the use of TLS encryption.
+
+## 2.3 Is Gopher's directory / text dichotomy *really* a shortcoming?
+
+Modern usage habits in the phlogosphere would seem to suggest that many
+people think it is.  An increasing number of users are serving content which
+is almost entirely text as item type 1, so that they can insert a relatively
+small number of "in line" links to other gopher content, providing some
+semblance of HTML's hyperlinking - a perfectly reasonable and inoffensive
+thing to want to do.  Without taking this approach, the best Gopher content
+authors can do is to paste a list of URLs at the bottom of their document,
+for their readers to manually copy and paste into their client.  This is not
+exactly a pleasant user experience.  But forcing hyperlinks into Gopher this
+way isn't just an abuse of the semantics of the Gopher protocol, it's also a
+surprisingly inefficient way to serve text, because every single line has to
+have an item type of i and a phony selector, hostname and port transmitted
+along with it to make a valid Gopher menu.  Any and all claims to simplicity
+and beauty which Gopher might have are destroyed by this.  Gemini takes the
+simple approach of letting people insert as many or as few links as they
+like into their text content, with extremely low overhead, but retains the
+one-link-per-line limitation of Gopher which results in clean, list-like
+organisation of content.  It's hard to see this as anything other than an
+improvement.
+
+Of course, if you really like the Gopher way, nothing in Gemini stops you
+from duplicating it.  You can serve item type 0 content with a MIME type of
+text/plain, and you can write text/gemini documents where every single line
+is a link line, replicating the look and feel of a RFC1436-fearing Gopher
+menu without that pesky non-standard i item type.
+
+## 2.4 Which shortcomings of the web does Gemini overcome?
+
+Gemini contains no equivalent of User-Agent or Referer headers, and the
+request format is not extensible so that these cannot be shoehorned in
+later.  In fact, Gemini requests contain nothing other than the URL of the
+resource being requested.  This goes a very long way to preventing user
+tracking.
+
+The "native content type" of Gemini (analogous to HTML for HTTP(S) or plain
+text for Gopher) never requires additional network transactions (there are
+no in-line images, external stylesheets, fonts or scripts, no iframes,
+etc.).  This allows for quick browsing even on slow connections and for full
+awareness of and control over which hosts connections are made to.
+
+The native content type of Gemini is strictly a document, with no facility
+for scripting, allowing for easy browsing even on old computers with limited
+processor speed or memory.
+
+## 2.5 Why not just use a subset of HTTP and HTML?
+
+Many people are confused as to why it's worth creating a new protocol to
+address perceived problems with optional, non-essential features of the web. 
+Just because websites *can* track users and run CPU-hogging Javsacript and
+pull in useless multi-megabyte header images or even larger autoplaying
+videos, doesn't mean they *have* to.  Why not just build non-evil websites
+using the existing technology?
+
+Of course, this is possible.  "The Gemini experience" is roughly equivalent
+to HTTP where the only request header is "Host" and the only response header
+is "Content-type" and HTML where the only tags are <p>, <pre>, <a>, <h1>
+through <h3>, <ul> and <li> and <blockquote> - and the
+https://gemini.circumlunar.space website offers pretty much this experience. 
+We know it can be done.
+
+The problem is that deciding upon a strictly limited subset of HTTP and
+HTML, slapping a label on it and calling it a day would do almost nothing to
+create a clearly demarcated space where people can go to consume *only* that
+kind of content in *only* that kind of way.  It's impossible to know in
+advance whether what's on the other side of a https:// URL will be within
+the subset or outside it.  It's very tedious to verify that a website
+claiming to use only the subset actually does, as many of the features we
+want to avoid are invisible (but not harmless!) to the user.  It's difficult
+or even impossible to deactivate support for all the unwanted features in
+mainstream browsers, so if somebody breaks the rules you'll pay the
+consequences.  Writing a dumbed down web browser which gracefully ignores
+all the unwanted features is much harder than writing a Gemini client from
+scratch.  Even if you did it, you'd have a very difficult time discovering
+the minuscule fraction of websites it could render.
+
+Alternative, simple-by-design protocols like Gopher and Gemini create
+alternative, simple-by-design spaces with obvious boundaries and hard
+restrictions.  You know for sure when you enter Geminispace, and you can
+know for sure and in advance when following a certain link will cause you
+leave it.  While you're there, you know for sure and in advance that
+everybody else there is playing by the same rules.  You can relax and get on
+with your browsing, and follow links to sites you've never heard of before,
+which just popped up yesterday, and be confident that they won't try to
+track you or serve you garbage because they *can't*.  You can do all this
+with a client you wrote yourself, so you *know* you can trust it.  It's a
+very different, much more liberating and much more empowering experience
+than trying to carve out a tiny, invisible sub-sub-sub-sub-space of the web.
+
+## 2.6 Does Gemini have any shortcomings of it's own?
+
+Naturally!
+
+Gemini has no support for caching, compression, or resumption of interrupted
+downloads.  As such, it's not very well suited to distributing large files,
+for values of "large" which depend upon the speed and reliability of your
+network connection.
+
+## 2.7 How can you say Gemini is simple if it uses TLS?
+
+Some people are upset that the TLS requirement means they need to use a TLS
+library to write Gemini code, whereas e.g.  Gopher allows them full control
+by writing everything from scratch themselves.
+
+Of course, even a "from scratch" Gopher client actually depends crucially on
+thousands of lines of complicated code written by other people in order to
+provide a functioning IP stack, DNS resolver and filesystem.  Using a TLS
+library to provide a trustworthy implementation of cryptography is little
+different.
+
+Gemini also turns TLS client certificates - very rarely seen on the web -
+into a first-class citizen with in-band signalling of their requirement. 
+This allows restricting access to Gemini resources to certain parties, or
+voluntarily establishing "sessions" with server-side applications, without
+having to pass around cookies, passwords, authentication tokens or anything
+else you may be used to.  It's much closer to SSH's notion of "authorized
+keys" and is, in fact, a much simpler approach to user authentication.
+
+## 2.8 Why use TLS for crypto instead of something more modern like the
+   Noise protocol?
+
+TLS is certainly not without its shortcomings, but:
+
+* There are bindings to TLS libraries available for almost every programming
+  language under the sun
+
+* Many developers are already at least partially familiar with TLS and
+  therefore don't need to learn anything new to implement Gemini
+
+* Most users are already trusting TLS to secure their web browsing and
+  email, and therefore don't need to decide whether or not they want to
+  trust some unfamiliar technology to start using Gemini
+
+* TLS is a deeply entrenched industry standard, whose definition and
+  implementations will both continue to be scrutinised and improved by
+  security experts for the foreseeable future, and that work will happen for
+  reasons entirely unrelated to Gemini - it makes a lot of sense for a small
+  project to "freeride" like this.
+
+## 2.9 Why didn't you just use Markdown instead of defining text/gemini?
+
+The text/gemini markup borrows heavily from Markdown, which might prompt
+some people to wonder "Why not just use Markdown as the default media type
+for Gemini?  Sure, it's complicated to implement, but like TLS there are
+plenty of libraries available in all the major languages".  Reasons not to
+go down this route include:
+
+* There are actually many subtly different and incompatible variants of
+  Markdown in existence, so unlike TLS all the different libraries are not
+  guaranteed to behave similarly.
+
+* The vast majority of Markdown libraries don't actually do anything more
+  than convert Markdown to HTML, which for a Gemini client is a needless
+  intermediary format which is heavier than the original!
+
+* Many Markdown variants permit features which were not wanted for Gemini,
+  e.g.  inline images.
+
+* A desire to preserve Gopher's requirement of "one link per line" on the
+  grounds that it encourages extremely clear site designs.
+
+Of course, it is possible to serve Markdown over Gemini.  The inclusion of a
+text/markdown Media type in the response header will allow more advanced
+clients to support it.
+
+## 2.10 Why doesn't text/gemini have support for in-line links?
+
+Because text/gemini is an entirely new format defined from scratch for
+Gemini, client authors will typically need to write their own code to parse
+and render the format from scratch, without being able to rely on a
+pre-existing, well-tested library implementation.  Therefore, it is
+important that the format is extremely simple to handle correctly.  The
+line-based format where text lines and link lines are separate concepts
+achieves this.  There is no need for clients to scan each line
+character-by-character, testing for the presence of some special link
+syntax.  Even the simplest special link syntax introduces the possibility of
+malformed syntax which clients would need to be robust against, and has edge
+cases whose handling would either need to be explicitly addressed in the
+protocol specification (leading to a longer, more tedious specification
+which was less fun to read and harder to hold in your head), or left
+undefined (leading to inconsistent behaviour across different clients). 
+Even though in-line links may be a more natural fit for some kinds of
+content, they're just not worth the increased complexity and fragility they
+would inevitably introduce to the protocol.
+
+It's true that you need to shift your thinking a bit to get used to the one
+link per line writing style, but it gets easier over time.  There are
+benefits to the style as well.  It encourages including only the most
+important or relevant links, organising links into related lists, and giving
+each link a maximally descriptive label without having to worry about
+whether or not that label fits naturally into the flow of your main text.
+
+## 2.11 Why doesn't text/gemini have support for styling?
+
+Some people have expressed a desire for something similar to CSS in Gemini. 
+While it's true that something much simpler and lighter than CSS could
+easily be designed, Gemini instead takes the position that visual styling of
+Gemini content should be under the sole and direct control of the reader,
+not the writer.  Not everybody has the same taste in colours and fonts, and
+no single way of styling a page will be optimal for all readers, all devices
+and all lighting conditions.  There is much more at stake here than the age
+old divide in preferene for dark text on a light background or vice versa. 
+People with reading disabilities like dyslexia may benefit tremendously from
+using specially designed fonts, for example.  A simple "one size fits all"
+styling system where content looks the same everywhere is guaranteed to
+perform poorly for a lot of people.  A more complicated styling system which
+can specify different looks for different devices and contexts burdens every
+individual author with the task of making sure their capsule is usable
+everywhere.  Experience from the web suggests that accessibility issues will
+often be an afterthought at best.  It's much simpler, and in fact much more
+liberating for content authors, to let content just be content, and leave
+styling to the client.  Some Gemini clients might look dull and boring, but
+there's no reason this has to be the case.  If there is demand for clients
+with high quality font rendering and beautiful typography, such clients will
+eventually be developed - and when they are, users who value those things
+can enjoy that reading experience everywhere in Geminispace, even when
+reading content written by authors who don't care about styling at all.
+
+## 2.12 Why isn't there an equivalent of the HTTP Content-length header?
+
+Non-extensibility of the protocol was a major design principle for Gemini. 
+Things like cookies, Etags and other tracking tools were not present in the
+original design of HTTP, but could be seamlessly added later because the
+HTTP response format is open-ended and allows the easy inclusion of new
+headers.  To minimise the risk of Gemini slowly mutating into something more
+web-like, it was decided to include one and exactly one piece of information
+in the response header for successful requests.  Including two pieces of
+information with a specified delimiter would provide a very obvious path for
+later adding a third piece - just use the same delimiter again.  There is
+basically no stable position between one piece of information and
+arbitrarily many pieces of information, so Gemini sticks hard to the former
+option, even if it means having to sacrifice some nice and seemingly
+harmless functionality.  Given this restriction, including only an
+equivalent of Content-type seemed clearly more useful than including only an
+equivalent of Content-length.  The same is true for other harmless and
+useful HTTP headers, like Last-Modified.
+
+Gopher also has no equivalent of the Content-length header, and this has not
+proven to be a practical obstacle in Gopherspace.
+
+Even without this header, it is possible (unlike in Gopher) for clients to
+distinguish between a Gemini transaction which has completed successfully
+and one which has dropped out mid-transfer due to a network fault or
+malicious attack via the presence or absence of a TLS Shutdown message.
+
+It is true that the inability for clients to tell users how much more of a
+large file still has to be downloaded and to estimate how long this may take
+means Gemini cannot provide a very user-friendly experience for large file
+downloads.  However, this would be the case even if Content-length were
+specified, as such an experience would also require other complications to
+be added to the protocol e.g.  the ability to resume interrupted downloads. 
+Gemini documents can of course straightforwardly link to resources hosted
+via HTTPS, BitTorrent, IPFS, DAT, etc.  and this may be the best option for
+very large files.
+
+## 2.13 Why isn't a protocol version number included with requests or
+   responses?
+
+This would only be useful if there were plans to smoothly upgrade to a
+"Gemini 2.0" in the future - and there aren't!  Gemini is a "less is more"
+reaction against web browsers and servers becoming too complicated and too
+powerful.  It makes no sense to plan to add more functionality to Gemini
+later.  Instead the plan is to "get it right the first time", as much as
+possible, then freeze the protocol specification forever after, without
+upgrades, enhancements or extensions.
+
+This may seem radical or unwise, but we're cautiously optimistic.  The
+Gopher specification has not been changed in about 30 years, and only a very
+small number of quite minor unofficial changes to that spec are in common
+use in today's Gopherspace, which is actually growing in popularity.  Gemini
+combines mature, ubiquitous internet primitives like URIs, MIME media types
+and TLS in a very straightforward way, and seeks to foster a culture of
+working within - and even embracing - carefully chosen limitations, rather
+than removing each constraint as it is encountered to make anything
+possible.  There are plenty of things that Gemini is useful for and good at
+right now, and there is no reason to think it won't be useful for and good
+at those same things decades from now.
+
+## 2.14 Why don't you care about retrocomputing support?
+
+Gopher is so simple that computers from the 80s or 90s can easily implement
+the protocol, and for some people this is one of the great virtues of
+Gopher.  The TLS requirement of Gemini limits it to more modern machines.
+
+Old machines are awesome, and keeping them running, online and useful for as
+long as possible is an awesome thing to do.  But it also makes no sense for
+the vast majority of internet users to sacrifice any and all privacy
+protection to facilitate this.  Remember, though, that Gemini does not aim
+to replace Gopher, so the retro-compatible internet is not directly
+endangered by it.  In fact, people serving content via Gopher right now are
+strongly encouraged to start also serving that same content via Gemini
+simultaneously.  Retrocomputing fans can continue to access the content via
+Gopher, while modern computer users who wish to can switch to Gemini and
+reap some benefits.
+
+# 3. Getting started in Geminispace
+
+## 3.1 I'm curious about Geminispace, how can I check it out?
+
+The lowest commitment way to explore Geminispace is to use a web proxy or
+"portal", such as one of the following:
+
+=> https://portal.mozz.us/gemini/gemini.circumlunar.space/	The mozz.us Gemini portal
+=> https://proxy.vulpes.one/gemini/gemini.circumlunar.space	The vulpes.one Gemini portal
+
+This will allow you to use your regular web browser to explore Geminispace. 
+If you like what you see, you might want to consider installing a dedicated
+Gemini client, which will typically offer a better and more complete
+browsing experience.  You can find a list of clients (and other software) at
+the link below.  There are even clients available for mobile platforms like
+Android and iOS!
+
+=> /software/	Gemini software list
+
+If you have an ssh client installed, you can try some terminal clients out
+without installing them by running:
+
+> ssh kiosk@gemini.circumlunar.space
+
+This Gemini kiosk was inspired by the Gopher kiosk at bitreich.org!
+
+## 3.2 Okay, I've got a client, where can I find content?
+
+For now, Geminispace is still small enough that it's feasible to use
+directories as a way to discover what is out there.  Some of these are
+listed below:
+
+=> gemini://medusae.space/			The medusae.space Gemini directory has a list of capsules divided into thematic categories
+=> gemini://gus.guru/known-hosts		The GUS search engine's list of known Gemini hosts
+=> /servers/					A historic list of the first 50 Gemini servers
+
+If you are looking for something in particular, Gemini has two search
+engines:
+
+=> gemini://gus.guru		GUS, the first Gemini search engine
+=> gemini://houston.coder.town	Houston, the second Gemini search engine
+
+There are two public aggregators which attempt to make it easier to find
+recently-updated material in Geminispace:
+
+=> /capcom/	CAPCOM, which aggregates Atom feeds of Gemini content
+=> gemini://rawtext.club:1965/~sloum/spacewalk.gmi	Spacewalk, which uses change-detection to find new content
+
+## 3.3 How can I put some content of my own in Geminspace?
+
+One option is to set up your own Gemini server on a VPS or a computer in
+your home (small SBCs like the RaspberryPi are perfectly capable of acting
+as Gemini servers).  There is a wide range of server software available to
+choose from:
+
+=> /software/	Gemini software list
+
+Alternatively, you can find somewhere else to host your content for you. 
+Gemini hosting is also available from the following providers:
+
+=> gemini://idf.looting.uk/hosting idf.looting.uk
+=> gemini://srht.site/ SourceHut (including support for custom domains!)
+
+A number of "pubnix" or "tilde" communities (multi-user unix systems where
+users interact with one another by sshing in and using local email, chat and
+BBS applications) also offer Gemini hosting (typically alongside web and/or
+Gopher hosting).  You may be able to get an account of one of the
+communities listed below.  Please note that most of these communities are
+older than Gemini itself, and may be focussed on other services, or may be
+specific to a particular theme or interest.  Research your choices carefully
+and join somewhere you think you might fit in well overall, rather than just
+treating these amazing little worlds as free space to dump your stuff.
+
+=> gemini://gemini.ctrl-c.club Ctrl-C.club
+=> gemini://envs.net envs.net
+=> gemini://tanelorn.city Tanelorn City, a writer-focussed server
+=> gemini://tilde.pink tilde.pink
+=> gemini://rawtext.club Raw Text Club, aka RTC
+=> gemini://breadpunk.club/ Breadpunk.club, a baking-themed server
+
+If you belong to a pubnix community which doesn't offer Gemini hosting, it
+can't hurt to ask the admin(s) if they are interested in adding this
+service!
+
+If you do not feel comfortable with the technologies needed to make use of
+pubnix hosting (ssh or sftp, terminal text editors, unix file permissions,
+etc) you can get free accounts at the services below which will allow you to
+maintain a capsule via a web application:
+
+=> https://gemlog.blue Gemlog Blue, featuring an ultralight interface with no cookies or Javascript
+=> https://flounder.online/ Flounder, where your content will be available via Gemini and the web simultaneously
+
+## 3.4 I set up my own Gemini server, is there anything I should do?
+
+Please consider joining the mailing list (see question 1.3) so that you can
+announce your new server to the community, and keep up to date with e.g. 
+updates to your server software or to the Gemini protocol itself.
+
+You can submit your server's URL to the GUS search engine so that it gets
+crawled, via the link below:
+
+=> gemini://gus.guru/add-seed	Submit a URL to GUS
+
+# 4. Contributing to the Gemini project
+
+## 4.1 I like the sound of the Gemini project, how can I help?
+
+Gemini already has a surprising number of client and server implementations
+in existence - which isn't to say more aren't welcome, but the real shortage
+right now is not of software but of content.  The more interesting and
+exciting stuff people find in Geminispace, the more likely they are to want
+to add content of their own.  So, the greatest contribution you can make to
+the project is to be a part of this process.  See question 3.3 above for
+details on how to get your content into Geminispace.
+
+If you have the necessary technical skills, you can make a major
+contribution to the growth of Geminispace by providing a hosting service
+which people can use to publish content.  This can be as simple as setting
+up sftp-only user accounts on a VPS.  Offering hosting doesn't necessarily
+need to be a big committment.  You can use the cheapest VPS services on
+offer to very comfortably host a dozen or so users.  A large number of hosts
+each serving the content of a relatively small number of users is a much
+more robust and sustainable ecosystem than a small number of servers each
+hosting hundreds or thousands of users!
+
+If you really want to write some software, a powerful tool for expanding
+Geminispace could be a single piece of software which simultaneously
+provides a Gemini server and a way for multiple users to easily manage the
+content provided by said server, e.g.  via an interactive web interface or
+by sending emails full of content;  Something like the Gemlog Blue and
+Flounder services (see question 3.3 again), but packaged up and documented
+in such a way that it's easy for people to deploy and customise their own
+multiuser sites, much like e.g.  a Mastodon instance.
+
+You can also help the project by contributing corrections and additions to
+or translations of the official site and documentation (see questions 4.2
+and 4.3 below).
+
+## 4.2 How do I contribute to the official Gemini site and documentation?
+
+All the documentation hosted at gemini.circumlunar.space, including the FAQ
+you're reading now, lives in a single git repository, which has read-only
+access open to the public.  You can clone the repo as follows:
+
+> git clone git://gemini.circumlunar.space/gemini-site
+
+Then, make your suggested changes to the relevant files (the structure of
+the URLs mirrors the structure of the repository exactly, so e.g. 
+gemini://gemini.circumlunar.space/docs/faq.gmi lives at docs/faq.gmi in the
+repo).  Commit your changes with meaningful commit messages (make sure to
+set your name and email address so people can see who did your work!), with
+one commit per conceptual change.  You then have two options to send your
+work upstream.
+
+If you have git's send-email command configured (see below for a link to a
+tutorial), you can email patches containing your commits to <solderpunk _at_
+posteo _dot_ net> with a single command.  Otherwise, you can simply run:
+
+> git format-patch origin
+
+to create a set of patch files, which you can manually attach to an email
+using your ordinary mail client of choice.
+
+=> https://git-send-email.io/	A friendly tutorial on configuring git send-email
+
+## 4.3 I'd like to translate some Gemini documentation into my native language, how can I do that?
+
+Thank you!  Volunteering to translate documentation is a wonderful way to
+help the project.
+
+To do so, first clone the git repository as described in question 4.2 above. 
+Change into the `doc` directory of the repository, and create a new
+subdirectory with your language's two letter ISO 639-1 code, e.g.  Finnish
+translations should live in `doc/fi/`, Japanese translations in `doc/jp/`,
+etc.  You can find a complete list of codes at Wikipedia, linked below.  If
+you are translating into a region-specific variant of a language, you can
+use RFC4646-style codes instead, e.g.  pt-PT or pt-BR for the Portuguese as
+spoken in Portugal or Brazil, respectively.
+
+=> https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes	List of language codes at Wikipedia
+
+For each English file which lives in `doc` which you want to translate,
+create a corresponding file in your language's subdirectory.  It's okay to
+change the file name as part of the translation, e.g.  the German
+translation of `doc/specification.gmi` might be called
+`doc/spezifikation.gmi`.  You can translate as many or as few of the files
+in `doc` as you have time and energy for.  Don't be shy about submitting
+partial translations!  Once somebody else who speaks your language sees your
+effort, they might provide some or all of the remaining work.  Having some
+content translated is better than none.
+
+Once you're done, copy across the `doc/index.gmi` file and modify it to
+match your translated filenames and document titles, and remove links for
+any of the original documents which you haven't translated yet.
+
+Finally, update `doc/translations.gmi` to include a link to your new
+subdirectory.
+
+Commit your translations to the repository and send Solderpunk the patch as
+described in question 4.2 above.

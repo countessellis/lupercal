@@ -1,6 +1,6 @@
 [package]
 name = "lupercal"
-licence = "MIT"
+license = "MIT"
 authors = ["Bethany Davis <ellis@despoena.com>"]
 description = "A single binary console based Gemini Protocol server and client."
 repository = "https://github.com/countessellis/lupercal"
@@ -66,3 +66,5 @@ panic = "abort"
 linker = "x86_64-w64-mingw32-gcc"
 ar = "x86_64-w64-mingw32-ar"
 
+[target.x86_64-apple-darwin]
+linker = "x86_64-apple-darwin-gcc"
