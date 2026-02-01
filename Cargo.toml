@@ -72,3 +72,15 @@ ar = "x86_64-w64-mingw32-ar"
 
 [target.x86_64-apple-darwin]
 linker = "x86_64-apple-darwin-gcc"
+
+[package.metadata.rpm]
+package = "lupercal"
+
+[package.metadata.rpm.cargo]
+buildflags = ["--release"]
+
+[package.metadata.rpm.targets]
+"./src/bin/client" = { path = "/usr/bin/./src/bin/client" }
+"./src/bin/convert" = { path = "/usr/bin/./src/bin/convert" }
+"./src/bin/server" = { path = "/usr/bin/./src/bin/server" }
+"./src/bin/proxy" = { path = "/usr/bin/./src/bin/proxy" }
