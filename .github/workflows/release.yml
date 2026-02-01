@@ -32,7 +32,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y rpm gcc-aarch64-linux-gnu
           cargo install cargo-deb
-          cargo install cargo-rpm
+          cargo install cargo-generate-rpm
+          cargo install cross
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
@@ -41,7 +42,7 @@ jobs:
         run: cargo deb --target ${{ matrix.target }}
 
       - name: Build .rpm package
-        run: cargo rpm build --target ${{ matrix.target }}
+        run: cargo generate-rpm build --target ${{ matrix.target }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -49,7 +50,7 @@ jobs:
           name: linux-${{ matrix.target }}
           path: |
             target/${{ matrix.target }}/debian/*.deb
-            target/${{ matrix.target }}/release/rpmbuild/RPMS/**/*.rpm
+            target/${{ matrix.target }}/generate-rpm/*.rpm
 
 #  macos:
 #    name: macOS Packages (${{ matrix.arch }})
