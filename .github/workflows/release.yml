@@ -73,7 +73,7 @@ jobs:
           targets: ${{ matrix.arch }}-apple-darwin
 
       - name: Build release binary
-        run: cargo build --release --bin --target ${{ matrix.arch }}-apple-darwin
+        run: cargo build --release --bins --target ${{ matrix.arch }}-apple-darwin
 
       - name: Archive Binaries
         run: |
