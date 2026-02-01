@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux Packages (${{ matrix.target }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm gcc-aarch64-linux-gnu
+          cargo install cargo-deb
+          cargo install cargo-rpm
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build .deb package
+        run: cargo deb --target ${{ matrix.target }}
+
+      - name: Build .rpm package
+        run: cargo rpm build --target ${{ matrix.target }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/debian/*.deb
+            target/${{ matrix.target }}/release/rpmbuild/RPMS/**/*.rpm
+
+#  macos:
+#    name: macOS Packages (${{ matrix.arch }})
+#    runs-on: macos-latest
+#
+#    strategy:
+#      matrix:
+#        arch:
+#          - x86_64
+#          - aarch64
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Install Rust
+#        uses: dtolnay/rust-toolchain@stable
+#        with:
+#          targets: ${{ matrix.arch }}-apple-darwin
+#
+#      - name: Build release binary
+#        run: cargo build --release --target ${{ matrix.arch }}-apple-darwin
+#
+#      - name: Prepare pkg root
+#        run: |
+#          mkdir -p pkgroot/usr/local/bin
+#          cp target/${{ matrix.arch }}-apple-darwin/release/myapp pkgroot/usr/local/bin/
+#
+#          mkdir -p pkgroot/Library/LaunchDaemons
+#          cp packaging/com.myapp.daemon.plist pkgroot/Library/LaunchDaemons/
+#
+#      - name: Build .pkg
+#        run: |
+#          pkgbuild \
+#            --root pkgroot \
+#            --identifier com.myapp.pkg \
+#            --version "${GITHUB_REF_NAME#v}" \
+#            --install-location / \
+#            myapp-${{ matrix.arch }}.pkg
+#
+#      - name: Upload macOS artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: macos-${{ matrix.arch }}
+#          path: myapp-${{ matrix.arch }}.pkg
+#
+  windows:
+    name: Windows MSI (${{ matrix.arch }})
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.arch }}-pc-windows-msvc
+
+      - name: Install WiX Toolset
+        run: |
+          iwr -useb https://aka.ms/wix/wix311.exe -outfile wix311.exe
+          ./wix311.exe /quiet
+
+      - name: Install cargo-wix
+        run: cargo install cargo-wix
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.arch }}-pc-windows-msvc
+
+      - name: Build MSI
+        run: cargo wix --target ${{ matrix.arch }}-pc-windows-msvc
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: target/wix/*.msi
+
+  publish:
+    name: Publish GitHub Release
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
