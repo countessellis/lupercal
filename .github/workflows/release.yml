@@ -27,6 +27,9 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install Cross
+        uses: taiki-e/install-action@cross
+
       - name: Install packaging tools
         run: |
           sudo apt-get update
@@ -36,7 +39,7 @@ jobs:
           cargo install cross
 
       - name: Build release binary
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cross build --release --bins --target ${{ matrix.target }}
 
       - name: Build .deb package
         run: cargo deb --target ${{ matrix.target }}
@@ -114,17 +117,22 @@ jobs:
         with:
           targets: ${{ matrix.arch }}-pc-windows-msvc
 
+      - name: Install Cross
+        uses: taiki-e/install-action@cross
+
       - name: Add WiX to PATH
         run: echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" >> $env:GITHUB_PATH
 
       - name: Install cargo-wix
         run: cargo install cargo-wix
 
-      - name: Build release binary
-        run: cargo build --release --target ${{ matrix.arch }}-pc-windows-msvc
+      - name: Build with Cross
+        run: cross build --release --bins --target ${{ matrix.arch }}-pc-windows-msvc
+        env:
+          OPENSSL_VENDORED: 1
 
       - name: Build MSI
-        run: cargo wix --target ${{ matrix.arch }}-pc-windows-msvc
+        run: cargo wix --target ${{ matrix.arch }}-pc-windows-msvc ${{ matrix.arch == 'aarch64' && '-a a64' || '' }}
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4

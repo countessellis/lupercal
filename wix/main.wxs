@@ -1,0 +1,17 @@
+<DirectoryRef Id="BinDir">
+  <Component Id="lupercal_exe" Guid="*">
+    <File Id="lupercal_exe" Source="target\release\lupercal.exe" KeyPath="yes"/>
+  </Component>
+  <Component Id="lupercal_client_exe" Guid="*">
+    <File Id="lupercal_client_exe" Source="target\release\lupercal-client.exe" KeyPath="yes"/>
+  </Component>
+  <Component Id="lupercal_server_exe" Guid="*">
+    <File Id="lupercal_server_exe" Source="target\release\lupercal-server.exe" KeyPath="yes"/>
+  </Component>
+  <Component Id="lupercal_proxy_exe" Guid="*">
+    <File Id="lupercal_proxy_exe" Source="target\release\lupercal-proxy.exe" KeyPath="yes"/>
+  </Component>
+  <Component Id="lupercal_convert_exe" Guid="*">
+    <File Id="lupercal_convert_exe" Source="target\release\lupercal-convert.exe" KeyPath="yes"/>
+  </Component>
+</DirectoryRef>
