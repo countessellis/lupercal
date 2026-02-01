@@ -36,7 +36,6 @@ jobs:
           sudo apt-get install -y rpm gcc-aarch64-linux-gnu
           cargo install cargo-deb
           cargo install cargo-generate-rpm
-          cargo install cross
 
       - name: Build release binary
         run: cross build --release --bins --target ${{ matrix.target }}
@@ -55,50 +54,37 @@ jobs:
             target/${{ matrix.target }}/debian/*.deb
             target/${{ matrix.target }}/generate-rpm/*.rpm
 
-#  macos:
-#    name: macOS Packages (${{ matrix.arch }})
-#    runs-on: macos-latest
-#
-#    strategy:
-#      matrix:
-#        arch:
-#          - x86_64
-#          - aarch64
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Install Rust
-#        uses: dtolnay/rust-toolchain@stable
-#        with:
-#          targets: ${{ matrix.arch }}-apple-darwin
-#
-#      - name: Build release binary
-#        run: cargo build --release --target ${{ matrix.arch }}-apple-darwin
-#
-#      - name: Prepare pkg root
-#        run: |
-#          mkdir -p pkgroot/usr/local/bin
-#          cp target/${{ matrix.arch }}-apple-darwin/release/myapp pkgroot/usr/local/bin/
-#
-#          mkdir -p pkgroot/Library/LaunchDaemons
-#          cp packaging/com.myapp.daemon.plist pkgroot/Library/LaunchDaemons/
-#
-#      - name: Build .pkg
-#        run: |
-#          pkgbuild \
-#            --root pkgroot \
-#            --identifier com.myapp.pkg \
-#            --version "${GITHUB_REF_NAME#v}" \
-#            --install-location / \
-#            myapp-${{ matrix.arch }}.pkg
-#
-#      - name: Upload macOS artifact
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: macos-${{ matrix.arch }}
-#          path: myapp-${{ matrix.arch }}.pkg
-#
+  macos:
+    name: macOS Packages (${{ matrix.arch }})
+    runs-on: macos-latest
+
+    strategy:
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: ${{ matrix.arch }}-apple-darwin
+
+      - name: Build release binary
+        run: cargo build --release --bin --target ${{ matrix.arch }}-apple-darwin
+
+      - name: Archive Binaries
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czf ../../../lupercal-macos-${{ matrix.target }}.tar.gz lupercal lupercal-client lupercal-server lupercal-proxy lupercal-convert
+
+      - name: Upload macOS artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: lupercal-${{ matrix.arch }}.tar.gz
+
   windows:
     name: Windows MSI (${{ matrix.arch }})
     runs-on: windows-latest
@@ -132,7 +118,7 @@ jobs:
           OPENSSL_VENDORED: 1
 
       - name: Build MSI
-        run: cargo wix --target ${{ matrix.arch }}-pc-windows-msvc ${{ matrix.arch == 'aarch64' && '-a a64' || '' }}
+        run: cargo wix --target ${{ matrix.arch }}-pc-windows-msvc ${{ matrix.arch == 'aarch64' && '-a a64' || '' }} --nocapture
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
