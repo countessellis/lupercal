@@ -1,11 +1,5 @@
 # TODO
 
-## To finish up v1.0.0:
-
-- Add the packaging and build code for the release.
-
-## Future After v1.0.0 Release:
-
 - Add help mode with --mode help and --help, as well as h key for displaying help within client.
 - Currently, when cert doesn't match cache, client errors and exits, and other failures end, instead display error within client.
 - Add setup mode that prompts for which mode to configure, then builds the config file, instead of create on missing.
