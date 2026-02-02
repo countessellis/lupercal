@@ -9,6 +9,7 @@
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="APPLICATIONROOTDIRECTORY" Name="Lupercal">
           <Directory Id="BinDir" Name="bin" />
+          <Directory Id="CONTENTDIR" Name="content" />
         </Directory>
       </Directory>
     </Directory>
@@ -37,6 +38,7 @@
       <ComponentRef Id="lupercal_server_exe"/>
       <ComponentRef Id="lupercal_proxy_exe"/>
       <ComponentRef Id="lupercal_convert_exe"/>
+      <ComponentGroupRef Id="ContentGroup" />
     </Feature>
   </Product>
 </Wix>

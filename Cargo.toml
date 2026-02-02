@@ -66,6 +66,16 @@ lto = true
 codegen-units = 1
 panic = "abort"
 
+[package.metadata.deb]
+assets = [
+  { source = "target/release/lupercal", dest = "/usr/bin/lupercal", mode = "755" },
+  { source = "target/release/lupercal-client", dest = "/usr/bin/lupercal-client", mode = "755" },
+  { source = "target/release/lupercal-server", dest = "/usr/bin/lupercal-server", mode = "755" },
+  { source = "target/release/lupercal-proxy", dest = "/usr/bin/lupercal-proxy", mode = "755" },
+  { source = "target/release/lupercal-convert", dest = "/usr/bin/lupercal-convert", mode = "755" }
+  { source = "content/**/*", dest = "/usr/share/lupercal/content", mode = "644" }
+]
+
 [target.x86_64-pc-windows-gnu]
 linker = "x86_64-w64-mingw32-gcc"
 ar = "x86_64-w64-mingw32-ar"
@@ -87,9 +97,10 @@ buildflags = ["--release"]
 
 [package.metadata.generate-rpm]
 assets = [
-    { source = "target/release/lupercal", dest = "/usr/bin/lupercal", mode = "755" },
-    { source = "target/release/lupercal-client", dest = "/usr/bin/lupercal-client", mode = "755" },
-    { source = "target/release/lupercal-server", dest = "/usr/bin/lupercal-server", mode = "755" },
-    { source = "target/release/lupercal-proxy", dest = "/usr/bin/lupercal-proxy", mode = "755" },
-    { source = "target/release/lupercal-convert", dest = "/usr/bin/lupercal-convert", mode = "755" }
+  { source = "target/release/lupercal", dest = "/usr/bin/lupercal", mode = "755" },
+  { source = "target/release/lupercal-client", dest = "/usr/bin/lupercal-client", mode = "755" },
+  { source = "target/release/lupercal-server", dest = "/usr/bin/lupercal-server", mode = "755" },
+  { source = "target/release/lupercal-proxy", dest = "/usr/bin/lupercal-proxy", mode = "755" },
+  { source = "target/release/lupercal-convert", dest = "/usr/bin/lupercal-convert", mode = "755" }
+  { source = "content/**/*", dest = "/usr/share/lupercal/content", mode = "644" }
 ]

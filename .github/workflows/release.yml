@@ -45,13 +45,33 @@ jobs:
           cargo deb --no-build --target ${{ matrix.target }}
           cargo generate-rpm --target ${{ matrix.target }}
 
+      - name: Archive Linux Binaries and Content
+        run: |
+          tar -czf lupercal-linux-binaries-${{ matrix.target }}.tar.gz \
+            -C target/${{ matrix.target }}/release lupercal lupercal-client lupercal-server lupercal-proxy lupercal-convert \
+            -C ../../../ content
+
+      - name: Prepare Standalone Binary
+        run: |
+          cp target/${{ matrix.target }}/release/lupercal lupercal-linux-${{ matrix.target }}
+          sha256sum lupercal-linux-${{ matrix.target }} > lupercal-linux-${{ matrix.target }}.sha256
+
+
+      - name: Generate Checksums
+        run: |
+          cd target/${{ matrix.target }}/debian && sha256sum *.deb > $(ls *.deb).sha256 && cd -
+          cd target/${{ matrix.target }}/generate-rpm && sha256sum *.rpm > $(ls *.rpm).sha256 && cd -
+          sha256sum *.tar.gz > lupercal-linux-${{ matrix.target }}.tar.gz.sha256
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-${{ matrix.target }}
           path: |
-            target/${{ matrix.target }}/debian/*.deb
-            target/${{ matrix.target }}/generate-rpm/*.rpm
+            target/${{ matrix.target }}/debian/*.deb*
+            target/${{ matrix.target }}/generate-rpm/*.rpm*
+            lupercal-linux-binaries-${{ matrix.target }}.tar.gz*
+            lupercal-linux-${{ matrix.target }}*
 
   macos:
     name: macOS Packages (${{ matrix.arch }})
@@ -76,14 +96,26 @@ jobs:
 
       - name: Archive Binaries
         run: |
-          tar -czf lupercal-macos-${{ matrix.arch }}.tar.gz \
+          tar -czf lupercal-macos-binaries-${{ matrix.arch }}.tar.gz \
           -C target/${{ matrix.arch }}-apple-darwin/release \
-          lupercal lupercal-client lupercal-server lupercal-proxy lupercal-convert
+          lupercal lupercal-client lupercal-server lupercal-proxy lupercal-convert \
+          -C ../../../ content
+
+      - name: Prepare Standalone Binary
+        run: |
+          cp target/${{ matrix.arch }}-apple-darwin/release/lupercal lupercal-macos-${{ matrix.arch }}
+          shasum -a 256 lupercal-macos-${{ matrix.arch }} > lupercal-macos-${{ matrix.arch }}.sha256
+
+      - name: Generate Checksums
+        run: shasum -a 256 *.tar.gz > lupercal-macos-binaries-${{ matrix.arch }}.tar.gz.sha256
 
       - name: Upload macOS artifact
         uses: softprops/action-gh-release@v2
         with:
-          files: lupercal-${{ matrix.arch }}.tar.gz
+          name: macos-${{ matrix.arch }}
+          path: |
+            lupercal-macos-binaries-${{ matrix.arch }}.tar.gz*
+            lupercal-macos-${{ matrix.arch }}*
 
   windows:
     name: Windows MSI (${{ matrix.arch }})
@@ -121,15 +153,42 @@ jobs:
         run: |
           if (!(Test-Path "target/wix")) { New-Item -ItemType Directory -Force -Path "target/wix" }
           $wixArch = if ("${{ matrix.arch }}" -eq "aarch64") { "arm64" } else { "x64" }
+          heat dir "content" -dr APPLICATIONROOTDIRECTORY -cg ContentGroup -gg -sfrag -srd -out wix/content.wxs
           candle -arch $wixArch -dBinPath="target/${{ matrix.arch }}-pc-windows-msvc/release" -out target/wix/main.wixobj wix/main.wxs
           light -ext WixUIExtension -out target/wix/lupercal-${{ matrix.arch }}.msi target/wix/main.wixobj
 
+      - name: Archive Windows Binaries and Content
+        shell: pwsh
+        run: |
+          mkdir staging
+          cp target/${{ matrix.arch }}-pc-windows-msvc/release/*.exe staging/
+          cp -Recurse content staging/
+          7z a -tzip lupercal-windows-binaries-${{ matrix.arch }}.zip ./staging/*
+
+      - name: Prepare Standalone Binary
+        shell: pwsh
+        run: |
+          $binName = "lupercal-windows-${{ matrix.arch }}.exe"
+          Copy-Item "target/${{ matrix.arch }}-pc-windows-msvc/release/lupercal.exe" $binName
+          $hash = (Get-FileHash $binName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $binName" | Out-File -FilePath "$binName.sha256" -Encoding ascii
+
+      - name: Generate Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path "target/wix/*.msi", "*.zip" | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Out-File -FilePath "$($_.FullName).sha256" -Encoding ascii
+          }
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-${{ matrix.arch }}
-          path: target/wix/*.msi
+          path: |
+            target/wix/*.msi*
+            lupercal-windows-binaries-${{ matrix.arch }}.zip*
+            lupercal-windows-${{ matrix.arch }}.exe*
 
   publish:
     name: Publish GitHub Release
@@ -147,11 +206,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
-            artifacts/**/*.msi
-            artifacts/**/*.tar.gz
+          files: artifacts/**/*
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           draft: false
