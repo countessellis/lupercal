@@ -31,16 +31,18 @@ jobs:
           tool: cross,cargo-deb,cargo-generate-rpm
 
       - name: Build and Package
-        env:
-          OPENSSL_VENDORED: 1
-          OPENSSL_STATIC: 1
-          PKG_CONFIG_ALLOW_CROSS: 1
-          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
-          AR_aarch64_unknown_linux_gnu: aarch64-linux-gnu-ar
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
-          cross build --release --bins --target ${{ matrix.target }}
-          cross deb --target ${{ matrix.target }}
+          cross build --release --bins --target ${{ matrix.target }} \
+            -e OPENSSL_VENDORED=1 \
+            -e OPENSSL_STATIC=1 \
+            -e PKG_CONFIG_ALLOW_CROSS=1 \
+            -e CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc \
+            -e AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar \
+            -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          cross deb --target ${{ matrix.target }} \
+            -e OPENSSL_VENDORED=1 \
+            -e PKG_CONFIG_ALLOW_CROSS=1 \
+            -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
           cargo generate-rpm --target ${{ matrix.target }}
 
       - name: Upload Linux artifacts
@@ -109,20 +111,19 @@ jobs:
       - name: Add WiX to PATH
         run: echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" >> $env:GITHUB_PATH
 
-      - name: Build with Cross
+      - name: Build binaries
         run: cargo build --release --bins --target ${{ matrix.arch }}-pc-windows-msvc
         env:
           OPENSSL_VENDORED: 1
 
-      - name: Build MSI (x64)
-        if: matrix.arch == 'x86_64'
-        run: cargo wix --target x86_64-pc-windows-msvc --nocapture
-
-      - name: Build MSI (ARM64)
-        if: matrix.arch == 'aarch64'
+      - name: Build MSI
+        shell: pwsh
         run: |
-          candle -arch a64 -dVersion=1.0.0 -out target/wix/main.wixobj wix/main.wxs
-          light -ext WixUIExtension -out target/wix/lupercal-aarch64.msi target/wix/main.wixobj
+          if (!(Test-Path "target/wix")) { New-Item -ItemType Directory -Force -Path "target/wix" }
+          $wixArch = if ("${{ matrix.arch }}" -eq "aarch64") { "arm64" } else { "x64" }
+          candle -arch $wixArch -dBinPath="target/${{ matrix.arch }}-pc-windows-msvc/release" -out target/wix/main.wixobj wix/main.wxs
+          light -ext WixUIExtension -out target/wix/lupercal-${{ matrix.arch }}.msi target/wix/main.wixobj
+
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
