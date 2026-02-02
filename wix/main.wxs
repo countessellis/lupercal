@@ -1,19 +1,42 @@
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com'>
-<DirectoryRef Id="BinDir">
-  <Component Id="lupercal_exe" Guid="*">
-    <File Id="lupercal_exe" Source="target\release\lupercal.exe" KeyPath="yes"/>
-  </Component>
-  <Component Id="lupercal_client_exe" Guid="*">
-    <File Id="lupercal_client_exe" Source="target\release\lupercal-client.exe" KeyPath="yes"/>
-  </Component>
-  <Component Id="lupercal_server_exe" Guid="*">
-    <File Id="lupercal_server_exe" Source="target\release\lupercal-server.exe" KeyPath="yes"/>
-  </Component>
-  <Component Id="lupercal_proxy_exe" Guid="*">
-    <File Id="lupercal_proxy_exe" Source="target\release\lupercal-proxy.exe" KeyPath="yes"/>
-  </Component>
-  <Component Id="lupercal_convert_exe" Guid="*">
-    <File Id="lupercal_convert_exe" Source="target\release\lupercal-convert.exe" KeyPath="yes"/>
-  </Component>
-</DirectoryRef>
+  <Product Id="*" Name="Lupercal" UpgradeCode="YOUR-GUID-HERE" Manufacturer="YourName" Language="1033" Version="1.0.0">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="APPLICATIONROOTDIRECTORY" Name="Lupercal">
+          <Directory Id="BinDir" Name="bin" />
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <DirectoryRef Id="BinDir">
+      <Component Id="lupercal_exe" Guid="*">
+        <File Id="lupercal_exe" Source="target\release\lupercal.exe" KeyPath="yes"/>
+      </Component>
+      <Component Id="lupercal_client_exe" Guid="*">
+        <File Id="lupercal_client_exe" Source="target\release\lupercal-client.exe" KeyPath="yes"/>
+      </Component>
+      <Component Id="lupercal_server_exe" Guid="*">
+        <File Id="lupercal_server_exe" Source="target\release\lupercal-server.exe" KeyPath="yes"/>
+      </Component>
+      <Component Id="lupercal_proxy_exe" Guid="*">
+        <File Id="lupercal_proxy_exe" Source="target\release\lupercal-proxy.exe" KeyPath="yes"/>
+      </Component>
+      <Component Id="lupercal_convert_exe" Guid="*">
+        <File Id="lupercal_convert_exe" Source="target\release\lupercal-convert.exe" KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="MainProgram" Title="Lupercal" Level="1">
+      <ComponentRef Id="lupercal_exe"/>
+      <ComponentRef Id="lupercal_client_exe"/>
+      <ComponentRef Id="lupercal_server_exe"/>
+      <ComponentRef Id="lupercal_proxy_exe"/>
+      <ComponentRef Id="lupercal_convert_exe"/>
+    </Feature>
+  </Product>
+</Wix>
