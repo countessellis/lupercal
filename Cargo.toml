@@ -72,7 +72,7 @@ assets = [
   { source = "target/release/lupercal-client", dest = "/usr/bin/lupercal-client", mode = "755" },
   { source = "target/release/lupercal-server", dest = "/usr/bin/lupercal-server", mode = "755" },
   { source = "target/release/lupercal-proxy", dest = "/usr/bin/lupercal-proxy", mode = "755" },
-  { source = "target/release/lupercal-convert", dest = "/usr/bin/lupercal-convert", mode = "755" }
+  { source = "target/release/lupercal-convert", dest = "/usr/bin/lupercal-convert", mode = "755" },
   { source = "content/**/*", dest = "/usr/share/lupercal/content", mode = "644" }
 ]
 
@@ -101,6 +101,6 @@ assets = [
   { source = "target/release/lupercal-client", dest = "/usr/bin/lupercal-client", mode = "755" },
   { source = "target/release/lupercal-server", dest = "/usr/bin/lupercal-server", mode = "755" },
   { source = "target/release/lupercal-proxy", dest = "/usr/bin/lupercal-proxy", mode = "755" },
-  { source = "target/release/lupercal-convert", dest = "/usr/bin/lupercal-convert", mode = "755" }
+  { source = "target/release/lupercal-convert", dest = "/usr/bin/lupercal-convert", mode = "755" },
   { source = "content/**/*", dest = "/usr/share/lupercal/content", mode = "644" }
 ]
