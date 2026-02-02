@@ -25,10 +25,15 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
 
+      - name: Install Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
       - name: Install Tools
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-zigbuild,cargo-deb,cargo-generate-rpm,zig
+          tool: cargo-zigbuild,cargo-deb,cargo-generate-rpm
 
       - name: Build and Package
         env:
