@@ -31,20 +31,16 @@ jobs:
           tool: cross,cargo-deb,cargo-generate-rpm
 
       - name: Build and Package
+        env:
+          OPENSSL_VENDORED: 1
+          OPENSSL_STATIC: 1
+          PKG_CONFIG_ALLOW_CROSS: 1
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          AR_aarch64_unknown_linux_gnu: aarch64-linux-gnu-ar
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
-          cross \
-            -e OPENSSL_VENDORED=1 \
-            -e OPENSSL_STATIC=1 \
-            -e PKG_CONFIG_ALLOW_CROSS=1 \
-            -e CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc \
-            -e AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar \
-            -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
-            build --release --bins --target ${{ matrix.target }}
-          cross \
-            -e OPENSSL_VENDORED=1 \
-            -e PKG_CONFIG_ALLOW_CROSS=1 \
-            -e CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
-            deb --target ${{ matrix.target }}
+          cross build --release --bins --target ${{ matrix.target }}
+          cross deb --target ${{ matrix.target }}
           cargo generate-rpm --target ${{ matrix.target }}
 
       - name: Upload Linux artifacts
