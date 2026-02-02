@@ -33,6 +33,8 @@ jobs:
       - name: Build and Package
         env:
           OPENSSL_VENDORED: 1
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          AR_aarch64_unknown_linux_gnu: aarch64-linux-gnu-ar
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
         run: |
           cross build --release --bins --target ${{ matrix.target }}
@@ -116,7 +118,9 @@ jobs:
 
       - name: Build MSI (ARM64)
         if: matrix.arch == 'aarch64'
-        run: cargo wix --target aarch64-pc-windows-msvc --nocapture -- -arch a64
+        run: |
+          candle -arch a64 -dVersion=1.0.0 -out target/wix/main.wixobj wix/main.wxs
+          light -ext WixUIExtension -out target/wix/lupercal-aarch64.msi target/wix/main.wixobj
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
