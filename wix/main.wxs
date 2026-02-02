@@ -15,19 +15,19 @@
 
     <DirectoryRef Id="BinDir">
       <Component Id="lupercal_exe" Guid="*">
-        <File Id="lupercal_exe" Source="${var.BinPath}\lupercal.exe" KeyPath="yes"/>
+        <File Id="lupercal_exe" Source="$(var.BinPath)\lupercal.exe" KeyPath="yes"/>
       </Component>
       <Component Id="lupercal_client_exe" Guid="*">
-        <File Id="lupercal_client_exe" Source="${var.BinPath}\lupercal-client.exe" KeyPath="yes"/>
+        <File Id="lupercal_client_exe" Source="$(var.BinPath)\lupercal-client.exe" KeyPath="yes"/>
       </Component>
       <Component Id="lupercal_server_exe" Guid="*">
-        <File Id="lupercal_server_exe" Source="${var.BinPath}\lupercal-server.exe" KeyPath="yes"/>
+        <File Id="lupercal_server_exe" Source="$(var.BinPath)\lupercal-server.exe" KeyPath="yes"/>
       </Component>
       <Component Id="lupercal_proxy_exe" Guid="*">
-        <File Id="lupercal_proxy_exe" Source="${var.BinPath}\lupercal-proxy.exe" KeyPath="yes"/>
+        <File Id="lupercal_proxy_exe" Source="$(var.BinPath)\lupercal-proxy.exe" KeyPath="yes"/>
       </Component>
       <Component Id="lupercal_convert_exe" Guid="*">
-        <File Id="lupercal_convert_exe" Source="${var.BinPath}\lupercal-convert.exe" KeyPath="yes"/>
+        <File Id="lupercal_convert_exe" Source="$(var.BinPath)\lupercal-convert.exe" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
