@@ -79,7 +79,7 @@ jobs:
       - name: Archive Binaries
         run: |
           cd target/${{ matrix.target }}/release
-        tar -czf ../../../lupercal-macos-${{ matrix.arch }}.tar.gz lupercal lupercal-client lupercal-server lupercal-proxy lupercal-convert
+          tar -czf ../../../lupercal-macos-${{ matrix.arch }}.tar.gz lupercal lupercal-client lupercal-server lupercal-proxy lupercal-convert
 
       - name: Upload macOS artifact
         uses: softprops/action-gh-release@v2
