@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='windows-1252'?>
-<Wix xmlns='http://schemas.microsoft.com'>
-  <Product Id="*" Name="Lupercal" UpgradeCode="YOUR-GUID-HERE" Manufacturer="YourName" Language="1033" Version="1.0.0">
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+  <Product Id="*" Name="Lupercal" UpgradeCode="a112a20c-de77-4edf-9fa3-1fcd8e8f85c4" Manufacturer="Bethany Davis" Language="1033" Version="1.0.0">
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
     <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
     <MediaTemplate EmbedCab="yes" />
@@ -15,19 +15,19 @@
 
     <DirectoryRef Id="BinDir">
       <Component Id="lupercal_exe" Guid="*">
-        <File Id="lupercal_exe" Source="target\release\lupercal.exe" KeyPath="yes"/>
+        <File Id="lupercal_exe" Source="${var.BinPath}\lupercal.exe" KeyPath="yes"/>
       </Component>
       <Component Id="lupercal_client_exe" Guid="*">
-        <File Id="lupercal_client_exe" Source="target\release\lupercal-client.exe" KeyPath="yes"/>
+        <File Id="lupercal_client_exe" Source="${var.BinPath}\lupercal-client.exe" KeyPath="yes"/>
       </Component>
       <Component Id="lupercal_server_exe" Guid="*">
-        <File Id="lupercal_server_exe" Source="target\release\lupercal-server.exe" KeyPath="yes"/>
+        <File Id="lupercal_server_exe" Source="${var.BinPath}\lupercal-server.exe" KeyPath="yes"/>
       </Component>
       <Component Id="lupercal_proxy_exe" Guid="*">
-        <File Id="lupercal_proxy_exe" Source="target\release\lupercal-proxy.exe" KeyPath="yes"/>
+        <File Id="lupercal_proxy_exe" Source="${var.BinPath}\lupercal-proxy.exe" KeyPath="yes"/>
       </Component>
       <Component Id="lupercal_convert_exe" Guid="*">
-        <File Id="lupercal_convert_exe" Source="target\release\lupercal-convert.exe" KeyPath="yes"/>
+        <File Id="lupercal_convert_exe" Source="${var.BinPath}\lupercal-convert.exe" KeyPath="yes"/>
       </Component>
     </DirectoryRef>
 
