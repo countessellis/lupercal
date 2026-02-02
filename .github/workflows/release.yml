@@ -42,7 +42,7 @@ jobs:
           OPENSSL_VENDORED: 1
         run: |
           cargo zigbuild --release --bins --target ${{ matrix.target }}
-          cross deb --no-build --target ${{ matrix.target }}
+          cargo deb --no-build --target ${{ matrix.target }}
           cargo generate-rpm --target ${{ matrix.target }}
 
       - name: Upload Linux artifacts
