@@ -1,4 +1,4 @@
-use ansi_term::Colour;
+pub type Colour = nu_ansi_term::Color;
 
 use crate::defaults::*;
 

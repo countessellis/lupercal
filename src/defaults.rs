@@ -1,6 +1,7 @@
 use env_logger::TimestampPrecision;
 use log::LevelFilter;
 
+// Build Constants:
 pub(crate) const APP_NAME:   &str = "Lupercal";
 pub(crate) const BUILD_NAME: &str = env!("BUILD_NAME");
 pub(crate) const VERSION_ID: &str = env!("CARGO_PKG_VERSION");
@@ -10,17 +11,18 @@ pub(crate) const AUTHORS:    &str = env!("CARGO_PKG_AUTHORS");
 pub(crate) const COPYRIGHT:  &str = "2026";
 pub(crate) const LICENSE:    &str = env!("CARGO_PKG_LICENSE");
 
+// Logging Constants:
 #[cfg(debug_assertions)]
 pub(crate) const DEFAULT_LOG_LEVEL: LevelFilter                                            = LevelFilter::Debug;
 #[cfg(not(debug_assertions))]
 pub(crate) const DEFAULT_LOG_LEVEL: LevelFilter                                            = LevelFilter::Info;
-
 pub(crate) const TUI_LOG_LEVEL: LevelFilter                                                = LevelFilter::Info;
 pub(crate) const DEFAULT_LOG_FORMAT_TIMESTAMP: Option<env_logger::fmt::TimestampPrecision> = Some(TimestampPrecision::Millis); // None;
 pub(crate) const DEFAULT_LOG_FORMAT_LEVEL: bool                                            = true; // false;
 pub(crate) const DEFAULT_LOG_FORMAT_TARGET: bool                                           = true; // false;
 pub(crate) const DEFAULT_LOG_TARGET: env_logger::fmt::Target                               = env_logger::fmt::Target::Stderr;
 
+// Lupercal Defaults:
 pub(crate) const DEFAULT_KEY_SIZE: u32          = 8192;
 pub(crate) const DEFAULT_LISTEN_ADDR: &str      = "0.0.0.0";
 pub(crate) const DEFAULT_LISTEN_PORT: &str      = "1965";
@@ -39,6 +41,7 @@ pub(crate) const DEFAULT_CLIENT_CONFIG: &str    = "client.cfg";
 pub(crate) const DEFAULT_PROXY_CONFIG: &str     = "proxy.cfg";
 pub(crate) const DEFAULT_CONVERT_CONFIG: &str   = "convert.cfg";
 
+// Misc Constants:
 pub(crate) const IMAGE_EXTENSIONS: &[&str] = &[
     "jpg", "jpeg", "jfif", "pjpeg", "pjp", "jpe", "jif", // JPEG
     "png",                                               // PNG

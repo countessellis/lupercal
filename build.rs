@@ -2,6 +2,7 @@ use std::time::SystemTime;
 use chrono::{DateTime, Utc};
 
 fn main() {
+  println!("cargo:rerun-if-changed=resources");
   let build_name = env!("CARGO_PKG_NAME");
   println!("cargo:rustc-env=BUILD_NAME={}",build_name);
   let build_time: DateTime<Utc> = SystemTime::now().into();

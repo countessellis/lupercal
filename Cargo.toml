@@ -4,9 +4,7 @@ license = "MIT"
 authors = ["Bethany Davis <ellis@despoena.com>"]
 description = "A single binary console based Gemini Protocol server and client."
 repository = "https://github.com/countessellis/lupercal"
-homepage = "https://github.com/countessellis/lupercal"
-readme = "README.md"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 default-run = "lupercal"
 
@@ -35,30 +33,30 @@ name = "lupercal"
 path = "src/lib.rs"
 
 [dependencies]
-ansi_term = "0.12.1"
-env_logger = "0.11.8"
-log = "0.4.29"
+dirs = "7.0"
+env_logger = "0.11"
+gag = "1.0"
+hex = "0.4"
+is-terminal = "0.4"
+log = "0.4"
+mime_guess = "2.0"
+nu-ansi-term = "0.50"
 openssl = { version = "0.10", features = ["vendored"] }
-url = "2.5.7"
-mime_guess = "2.0.5"
-rpassword = "7.4.0"
-ratatui = "0.30.0"
-textwrap = "0.16.2"
-tui-logger = { version = "0.18.0", features = ["tracing", "tracing-subscriber", "tracing-support"] }
-gag = "1.0.0"
-dirs = "6.0.0"
-walkdir = "2.5.0"
-tracing-subscriber = { version = "0.3.22", features = ["time"] }
-is-terminal = "0.4.17"
-hex = "0.4.3"
-time = { version = "0.3.45", features = ["formatting", "macros", "parsing"] }
-strip-prefix-suffix-sane = "0.1.0"
-tracing-log = "0.2.0"
-tracing-journald = "0.3.2"
-tracing-appender = "0.2.4"
+ratatui = "0.30"
+rpassword = "7.4"
+strip-prefix-suffix-sane = "0.1"
+textwrap = "0.16"
+time = { version = "0.3", features = ["formatting", "macros", "parsing"] }
+tracing-log = "0.2"
+tracing-appender = "0.2"
+tracing-journald = "0.3"
+tracing-subscriber = { version = "0.3", features = ["time"] }
+tui-logger = { version = "0.18", features = ["tracing", "tracing-subscriber", "tracing-support"] }
+url = "2.5"
+walkdir = "2.5"
 
 [build-dependencies]
-chrono = "0.4.42"
+chrono = "0.4"
 
 [profile.release]
 strip = true
