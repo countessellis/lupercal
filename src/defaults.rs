@@ -41,6 +41,10 @@ pub(crate) const DEFAULT_CLIENT_CONFIG: &str    = "client.cfg";
 pub(crate) const DEFAULT_PROXY_CONFIG: &str     = "proxy.cfg";
 pub(crate) const DEFAULT_CONVERT_CONFIG: &str   = "convert.cfg";
 
+// Splash:
+pub(crate) const SPLASH_COLOUR:          u8    = 178;
+pub(crate) const SPLASH_TXT:             &str  = include_str!("../resources/lupercal.txt");
+
 // Misc Constants:
 pub(crate) const IMAGE_EXTENSIONS: &[&str] = &[
     "jpg", "jpeg", "jfif", "pjpeg", "pjp", "jpe", "jif", // JPEG

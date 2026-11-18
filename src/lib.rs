@@ -12,3 +12,4 @@ pub mod server;
 pub mod splash;
 pub mod store;
 pub mod util;
+pub mod version;

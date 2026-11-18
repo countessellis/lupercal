@@ -22,7 +22,10 @@ pub fn init() {
 
   #[cfg(debug_assertions)]
   {
-
+    use {
+      tracing_appender as _,
+      tracing_journald as _,
+    };
     let fmt_layer = match DEFAULT_LOG_FORMAT_TIMESTAMP {
       Some(TimestampPrecision::Seconds) => {
         let timer = UtcTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"));

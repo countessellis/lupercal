@@ -8,6 +8,7 @@ use crate::mode::*;
 use crate::request::*;
 use crate::splash::*;
 use crate::server::*;
+use crate::version::*;
 
 use crate::logger;
 
