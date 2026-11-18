@@ -1,3 +1,8 @@
+![Lupercal](resources/lupercal-small.png)
+
+---
+---
+
 # Lupercal
 
 A simple Gemini server and client written in Rust, also including a proxy mode and ability to convert capsules to HTML.
@@ -91,3 +96,8 @@ lupercal-convert --in [gemini directory] --out [html directory]
     --in [gemini directory]             Gemini capsule directory to convert.
     --out [HTML directory]              HTML directory to place the converted site into.
 ```
+
+---
+---
+
+©2026 Bethany Davis <ellis@despoena.com>.
