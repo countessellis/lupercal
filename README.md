@@ -1,4 +1,4 @@
-![Lupercal](resources/lupercal-small.png)
+![Lupercal](resources/lupercal-github.png)
 
 ---
 ---
